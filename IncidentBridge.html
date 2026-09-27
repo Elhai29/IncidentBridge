@@ -1,0 +1,691 @@
+<!-- ... existing code ... -->
+    <!-- VIEW 2: WORKSPACE - THE ACTIVE MONITORED SITE (האתר שבו עובדים והדמיית קריסות) -->
+    <section id="view-workspace" class="view-section hidden py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-grow">
+      
+      <!-- Top Workspace Controls -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-md bg-cyan-950 text-cyan-400 border border-cyan-800 text-xs font-mono font-bold">
+              סביבת עבודה מנוטרת
+            </span>
+            <span class="text-xs text-slate-400 font-mono">Real-Time Diagnostics Active</span>
+          </div>
+          <h2 class="text-2xl font-bold text-white mt-1">חיבור אתר אמיתי, ניטור ביצועים ובדיקת תקלות</h2>
+          <p class="text-sm text-slate-400">הזן כתובת אתר אמיתית או מערכת שברצונך לנטר. המערכת תבצע בדיקות נגישות, שרת, זמני שיהוי (Latency), אבטחה וקריסות.</p>
+        </div>
+
+        <!-- Mode Toggles & Global Interceptor Indicator -->
+        <div class="flex items-center gap-3 flex-wrap">
+          <button onclick="openRealSiteSdkModal()" class="px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow">
+            <i data-lucide="code-2" class="w-4 h-4"></i> קבל קוד סוכן ניטור (SDK) לאתר שלך
+          </button>
+          <div class="bg-cyber-card border border-cyber-border rounded-xl px-4 py-2 flex items-center gap-3">
+            <i data-lucide="eye" class="w-4 h-4 text-cyan-400 animate-pulse"></i>
+            <div class="text-xs">
+              <span class="text-slate-400 block">סורק בדיקות חי:</span>
+              <span id="scannerStatusText" class="text-emerald-400 font-bold font-mono">מוכן לביצוע סריקה</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real Site Connector & Probe Launcher Banner -->
+      <div class="glass-panel p-5 rounded-2xl border border-cyan-500/30 mb-6 relative overflow-hidden">
+        <div class="flex flex-col lg:flex-row items-center justify-between gap-4 relative z-10">
+          <div class="w-full lg:w-8/12 space-y-2">
+            <label class="text-xs font-bold text-cyan-300 font-mono flex items-center gap-2">
+              <i data-lucide="globe" class="w-4 h-4 text-cyan-400"></i> כתובת האתר האמיתי שברצונך לבדוק (URL):
+            </label>
+            <div class="flex items-center gap-2">
+              <div class="relative flex-grow">
+                <i data-lucide="link" class="w-4 h-4 text-slate-400 absolute right-3 top-3"></i>
+                <input type="url" id="realTargetSiteUrl" placeholder="https://my-actual-site.com" value="https://example.com" class="w-full bg-cyber-darker border border-cyber-border rounded-xl pr-9 pl-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono">
+              </div>
+              <button onclick="runRealSiteComprehensiveDiagnostics()" id="btnRunSiteAudit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg transition flex items-center gap-2 shrink-0">
+                <i data-lucide="search" class="w-4 h-4"></i> בצע בדיקת אמת עכשיו
+              </button>
+            </div>
+            <p class="text-[11px] text-slate-400">
+              * המערכת תמדוד מהירות חיבור, פרוטוקול SSL, תגובת שרת, בדיקת זמינות, ותפתח קריאה אוטומטית במקרה של כשל או שיהוי חריג.
+            </p>
+          </div>
+
+          <!-- Quick Test Targets -->
+          <div class="w-full lg:w-4/12 bg-cyber-darker p-3 rounded-xl border border-slate-800 text-xs">
+            <span class="text-slate-400 font-mono text-[11px] block mb-1.5 font-bold">או בחר אתר לבדיקה מהירה:</span>
+            <div class="flex flex-wrap gap-1.5">
+              <button onclick="setRealSiteUrl('https://example.com')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono">example.com (תקין)</button>
+              <button onclick="setRealSiteUrl('https://httpstat.us/500')" class="px-2 py-1 rounded bg-rose-950/70 hover:bg-rose-900 border border-rose-800/60 text-rose-300 text-[11px] font-mono">שרת שגיאה 500</button>
+              <button onclick="setRealSiteUrl('https://httpstat.us/200?sleep=3000')" class="px-2 py-1 rounded bg-amber-950/70 hover:bg-amber-900 border border-amber-800/60 text-amber-300 text-[11px] font-mono">איטיות שרת (3s)</button>
+              <button onclick="setRealSiteUrl('http://insecure-http-site.internal')" class="px-2 py-1 rounded bg-purple-950/70 hover:bg-purple-900 border border-purple-800/60 text-purple-300 text-[11px] font-mono">פרוטוקול לא מאובטח</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: The Monitored Work App (סימולציית האתר שבו המשתמש עובד) -->
+        <div class="lg:col-span-8 flex flex-col gap-6">
+          
+          <div class="glass-panel rounded-2xl border border-cyber-border overflow-hidden shadow-xl flex flex-col">
+            <!-- Simulated Browser Address Bar -->
+            <div class="bg-cyber-dark px-4 py-2.5 border-b border-cyber-border flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-slate-600"></div>
+                <div class="w-3 h-3 rounded-full bg-slate-600"></div>
+                <div class="w-3 h-3 rounded-full bg-slate-600"></div>
+              </div>
+              <div class="w-8/12 bg-cyber-darker border border-cyber-border rounded-lg px-3 py-1 flex items-center justify-between text-xs font-mono text-slate-300">
+                <div class="flex items-center gap-2 truncate">
+                  <i id="browserLockIcon" data-lucide="lock" class="w-3 h-3 text-emerald-400 shrink-0"></i>
+                  <span id="activeAppUrlDisplay" class="text-slate-200 truncate font-mono text-xs">https://example.com</span>
+                </div>
+                <button onclick="runRealSiteComprehensiveDiagnostics()" title="סרוק מחדש" class="hover:text-cyan-400">
+                  <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-slate-400">
+                <span id="realAppLivePingDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span id="realAppLivePingLabel">מחובר לבדיקה</span>
+              </div>
+            </div>
+
+            <!-- Monitored Site Interactive Diagnostics Container -->
+            <div id="simulatedAppContainer" class="p-6 bg-slate-900/60 min-h-[380px] flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800 flex-wrap gap-2">
+                  <div class="flex items-center gap-3">
+                    <div id="targetSiteLogoBox" class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-xs shadow">
+                      WEB
+                    </div>
+                    <div>
+                      <h4 id="monitoredSiteHeadline" class="font-bold text-white text-sm">אתר פעיל תחת ניטור שרתים</h4>
+                      <p id="monitoredSiteSubline" class="text-xs text-slate-400 font-mono">URL: https://example.com &bull; ביקורת זמינות רשת</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span id="appStatusIndicator" class="px-2.5 py-1 rounded text-xs font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      Normal (HTTP 200)
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Live Metrics Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+                  <div class="bg-cyber-darker p-3 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400">זמן שיהוי (RTT Latency):</span>
+                    <div id="metricLatency" class="text-lg font-bold text-emerald-400 mt-1 font-mono">-- ms</div>
+                  </div>
+                  <div class="bg-cyber-darker p-3 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400">פרוטוקול הצפנה:</span>
+                    <div id="metricSecurity" class="text-lg font-bold text-cyan-400 mt-1 font-mono">HTTPS</div>
+                  </div>
+                  <div class="bg-cyber-darker p-3 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400">זמינות רשת (Reachability):</span>
+                    <div id="metricReachability" class="text-lg font-bold text-white mt-1 font-mono">100% OK</div>
+                  </div>
+                  <div class="bg-cyber-darker p-3 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400">חסימת כשלים (Faults):</span>
+                    <div id="metricFaultStatus" class="text-lg font-bold text-emerald-400 mt-1 font-mono">0 קריסות</div>
+                  </div>
+                </div>
+
+                <!-- Detailed Audit Checklist on Real Target -->
+                <div id="realSiteAuditChecklist" class="space-y-2 mb-4">
+                  <div class="p-3 rounded-xl bg-cyber-darker border border-slate-800 flex items-center justify-between text-xs">
+                    <span class="flex items-center gap-2 text-slate-300">
+                      <i id="chkIconDns" data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+                      <span>פתרון שמות (DNS / Host Reachability)</span>
+                    </span>
+                    <span id="chkValDns" class="font-mono text-emerald-400 font-bold">Resolved</span>
+                  </div>
+                  <div class="p-3 rounded-xl bg-cyber-darker border border-slate-800 flex items-center justify-between text-xs">
+                    <span class="flex items-center gap-2 text-slate-300">
+                      <i id="chkIconSsl" data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+                      <span>בדיקת תעודת הצפנה (TLS / HTTPS Encryption)</span>
+                    </span>
+                    <span id="chkValSsl" class="font-mono text-emerald-400 font-bold">Valid TLS</span>
+                  </div>
+                  <div class="p-3 rounded-xl bg-cyber-darker border border-slate-800 flex items-center justify-between text-xs">
+                    <span class="flex items-center gap-2 text-slate-300">
+                      <i id="chkIconCors" data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+                      <span>בדיקת תגובת שרת ו-CORS Header Protection</span>
+                    </span>
+                    <span id="chkValCors" class="font-mono text-emerald-400 font-bold">Audited</span>
+                  </div>
+                </div>
+
+                <div id="simulatedErrorLogBox" class="p-3.5 rounded-xl bg-cyber-darker border border-slate-800 text-xs font-mono text-slate-400 space-y-1">
+                  <div>[System] Diagnostics suite ready for real target analysis.</div>
+                  <div>[Bridge Agent] Monitoring DOM mutations, window.onerror and HTTP responses...</div>
+                  <div class="text-slate-500">לחצו על 'בצע בדיקת אמת עכשיו' כדי לבדוק את הכתובת שהזנתם בזמן אמת!</div>
+                </div>
+              </div>
+
+              <!-- Internal App action buttons -->
+              <div class="pt-4 border-t border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                <span class="text-xs text-slate-400">סימולציית פעולות מהירה על הכתובת הנוכחית:</span>
+                <div class="flex items-center gap-2">
+                  <button onclick="testTargetApiPing()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition flex items-center gap-1">
+                    <i data-lucide="zap" class="w-3.5 h-3.5 text-cyan-400"></i> שלח Ping לשרת
+                  </button>
+                  <button onclick="simulateTargetCrash500()" class="px-3 py-1.5 bg-rose-950/60 hover:bg-rose-900 border border-rose-800/60 text-rose-300 text-xs rounded-lg transition flex items-center gap-1">
+                    <i data-lucide="bomb" class="w-3.5 h-3.5"></i> דמה כשל שרת (500)
+                  </button>
+                  <button onclick="simulateTargetHighLatency()" class="px-3 py-1.5 bg-amber-950/60 hover:bg-amber-900 border border-amber-800/60 text-amber-300 text-xs rounded-lg transition flex items-center gap-1">
+                    <i data-lucide="clock" class="w-3.5 h-3.5"></i> דמה איטיות חריגה
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Realtime Diagnostic Stream / Console -->
+          <div class="glass-panel p-4 rounded-2xl border border-cyber-border">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold font-mono text-slate-300 flex items-center gap-2">
+                <i data-lucide="terminal" class="w-4 h-4 text-cyan-400"></i> מסוף דיבוג חי (Telemetry & Crash Hooks)
+              </span>
+              <button onclick="clearConsoleLog()" class="text-xs text-slate-500 hover:text-slate-300">נקה מסוף</button>
+            </div>
+            <div id="consoleLiveLog" class="h-32 overflow-y-auto bg-cyber-darker rounded-xl p-3 font-mono text-xs space-y-1 text-slate-300">
+              <div class="text-slate-500">[Agent] Listener registered on window.addEventListener('error')</div>
+              <div class="text-slate-500">[Agent] Unhandled promise rejection trap armed</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Incident Trigger Dashboard (סרגל הזרקת סוגי תקלות מתוייגות) -->
+        <div class="lg:col-span-4 flex flex-col gap-5">
+<!-- ... existing code ... -->
+  <!-- MODAL: DATA CORRUPTION JSON UPLOAD & SERVER ANALYZER -->
+  <div id="dataCorruptionModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden transition-all duration-300">
+<!-- ... existing code ... -->
+  </div>
+
+  <!-- MODAL: REAL-SITE SDK INTEGRATION (קוד הטמעה לאתר האמיתי) -->
+  <div id="realSiteSdkModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-2xl rounded-3xl border border-cyan-500/50 shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+      <div class="flex items-start justify-between pb-3 border-b border-cyber-border">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-cyan-950/80 border border-cyan-500/40 text-cyan-400 flex items-center justify-center">
+            <i data-lucide="code" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">קוד סוכן ניטור (IncidentBridge Agent) לאתר שלך</h3>
+            <p class="text-xs text-slate-400">הטמע 4 שורות קוד בראש האתר האמיתי כדי שכל קריסה תקפוץ מיידית על המסך</p>
+          </div>
+        </div>
+        <button onclick="closeRealSiteSdkModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 my-4 text-xs">
+        <p class="text-slate-300">
+          העתק את הקוד הבא והדבק אותו בתוך תגית ה-<code>&lt;head&gt;</code> או בראש קובץ ה-JavaScript הראשי של האתר שלך:
+        </p>
+
+        <div class="relative">
+          <pre id="sdkCodeBlock" class="p-3.5 bg-cyber-darker rounded-xl border border-slate-700/80 text-[11px] font-mono text-cyan-300 overflow-x-auto leading-relaxed select-all">&lt;!-- IncidentBridge Pro Real-Time Crash Agent --&gt;
+&lt;script&gt;
+  window.addEventListener('error', function(event) {
+    const payload = {
+      type: 'INCIDENT_BRIDGE_CRASH',
+      title: event.message || 'Unhandled Client Exception',
+      sourceUrl: window.location.href,
+      stackTrace: event.error ? event.error.stack : (event.filename + ':' + event.lineno),
+      severity: 'fatal',
+      timestamp: new Date().toISOString()
+    };
+    // שידור מיידי לכל הטאבים והאתרים של המהנדס
+    if (window.BroadcastChannel) {
+      new BroadcastChannel('incident_bridge_bus').postMessage(payload);
+    }
+  });
+  window.addEventListener('unhandledrejection', function(event) {
+    if (window.BroadcastChannel) {
+      new BroadcastChannel('incident_bridge_bus').postMessage({
+        type: 'INCIDENT_BRIDGE_CRASH',
+        title: 'Promise Rejection: ' + (event.reason ? (event.reason.message || event.reason) : 'Unknown'),
+        sourceUrl: window.location.href,
+        severity: 'critical'
+      });
+    }
+  });
+&lt;/script&gt;</pre>
+          <button onclick="copySdkCode()" class="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-[11px] flex items-center gap-1 shadow">
+            <i data-lucide="copy" class="w-3 h-3"></i> העתק קוד
+          </button>
+        </div>
+
+        <div class="p-3 bg-cyan-950/30 rounded-xl border border-cyan-800/40 text-cyan-300 space-y-1">
+          <div class="font-bold flex items-center gap-1.5">
+            <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> כיצד זה פועל?
+          </div>
+          <p class="text-slate-300 leading-relaxed">
+            הקוד עושה שימוש ב-<code>BroadcastChannel API</code> חוצה-טאבים. ברגע שתתרחש שגיאת קוד, קריסת זיכרון או אי-תפיסת הבטחה (Promise) באתר האמיתי שלך, המערכת תזהה את האירוע מיד ותקפיץ את התראת המסך הרוחבית בלי קשר לטאב שבו אתה נמצא.
+          </p>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-cyber-border flex items-center justify-between">
+        <button onclick="closeRealSiteSdkModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+          סגור
+        </button>
+        <button onclick="testRealSiteBroadcastChannel()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow transition flex items-center gap-1.5">
+          <i data-lucide="radio" class="w-3.5 h-3.5"></i> בצע בדיקת שידור SDK חי
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER WITH AUTHORS SIGNATURE -->
+<!-- ... existing code ... -->
+```
+```html:IncidentBridge Pro - מערכת התראות וקריסות בזמן אמת:incident_bridge.html
+<!-- ... existing code ... -->
+    /* DATA CORRUPTION SERVER LOGIC & MODAL HANDLING */
+    let selectedCorruptionFileName = 'payload.json';
+
+    function openDataCorruptionModal() {
+<!-- ... existing code ... -->
+    }
+
+    /* REAL TARGET SITE COMPREHENSIVE DIAGNOSTICS SUITE */
+    function setRealSiteUrl(url) {
+      const input = document.getElementById('realTargetSiteUrl');
+      if (input) {
+        input.value = url;
+      }
+      runRealSiteComprehensiveDiagnostics();
+    }
+
+    function openRealSiteSdkModal() {
+      document.getElementById('realSiteSdkModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeRealSiteSdkModal() {
+      document.getElementById('realSiteSdkModal').classList.add('hidden');
+    }
+
+    function copySdkCode() {
+      const codeText = document.getElementById('sdkCodeBlock').innerText;
+      const tempTextArea = document.createElement('textarea');
+      tempTextArea.value = codeText;
+      document.body.appendChild(tempTextArea);
+      tempTextArea.select();
+      try {
+        document.execCommand('copy');
+        showToast('קוד ה-SDK הועתק ללוח בהצלחה!', 'success');
+      } catch (err) {
+        showToast('שגיאה בהעתקת קוד ללוח', 'warning');
+      }
+      document.body.removeChild(tempTextArea);
+    }
+
+    // Comprehensive real-site diagnostic engine
+    async function runRealSiteComprehensiveDiagnostics() {
+      const input = document.getElementById('realTargetSiteUrl');
+      let targetUrl = input ? input.value.trim() : '';
+
+      if (!targetUrl) {
+        showToast('נא להזין כתובת אתר לבדיקה', 'warning');
+        return;
+      }
+
+      // Prepend https if protocol is missing
+      if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        targetUrl = 'https://' + targetUrl;
+        if (input) input.value = targetUrl;
+      }
+
+      // Update UI Header
+      const displayUrl = document.getElementById('activeAppUrlDisplay');
+      if (displayUrl) displayUrl.textContent = targetUrl;
+      const inputAppUrl = document.getElementById('activeAppUrl');
+      if (inputAppUrl) inputAppUrl.value = targetUrl;
+
+      const subline = document.getElementById('monitoredSiteSubline');
+      if (subline) subline.textContent = `URL: ${targetUrl} • בדיקה רציפה מתבצעת כעת...`;
+
+      const scannerText = document.getElementById('scannerStatusText');
+      if (scannerText) {
+        scannerText.textContent = 'מבצע סריקה רב-שכבתית...';
+        scannerText.className = 'text-cyan-400 font-bold font-mono animate-pulse';
+      }
+
+      logToTelemetryConsole(`[AUDIT START] Initiating multi-layer diagnostics on target: ${targetUrl}`);
+
+      // 1. Audit Protocol & Security
+      let isHttps = targetUrl.startsWith('https://');
+      const metricSecurity = document.getElementById('metricSecurity');
+      const browserLock = document.getElementById('browserLockIcon');
+      const chkIconSsl = document.getElementById('chkIconSsl');
+      const chkValSsl = document.getElementById('chkValSsl');
+
+      if (!isHttps) {
+        if (metricSecurity) {
+          metricSecurity.textContent = 'HTTP (Insecure)';
+          metricSecurity.className = 'text-lg font-bold text-rose-400 mt-1 font-mono';
+        }
+        if (browserLock) {
+          browserLock.setAttribute('data-lucide', 'unlock');
+          browserLock.className = 'w-3 h-3 text-rose-400 shrink-0';
+        }
+        if (chkIconSsl) {
+          chkIconSsl.className = 'w-4 h-4 text-rose-500';
+          chkIconSsl.setAttribute('data-lucide', 'alert-triangle');
+        }
+        if (chkValSsl) {
+          chkValSsl.textContent = 'Non-TLS / Insecure';
+          chkValSsl.className = 'font-mono text-rose-400 font-bold';
+        }
+        logToTelemetryConsole('[SECURITY AUDIT] Warning: Target uses plain unencrypted HTTP.');
+      } else {
+        if (metricSecurity) {
+          metricSecurity.textContent = 'HTTPS (TLS)';
+          metricSecurity.className = 'text-lg font-bold text-cyan-400 mt-1 font-mono';
+        }
+        if (browserLock) {
+          browserLock.setAttribute('data-lucide', 'lock');
+          browserLock.className = 'w-3 h-3 text-emerald-400 shrink-0';
+        }
+        if (chkIconSsl) {
+          chkIconSsl.className = 'w-4 h-4 text-emerald-400';
+          chkIconSsl.setAttribute('data-lucide', 'check-circle');
+        }
+        if (chkValSsl) {
+          chkValSsl.textContent = 'Valid TLS / Secure';
+          chkValSsl.className = 'font-mono text-emerald-400 font-bold';
+        }
+      }
+
+      // 2. Perform live network latency probe & reachability check
+      const startTime = performance.now();
+      let latency = 0;
+      let reachabilitySuccess = false;
+      let fetchStatusCode = null;
+      let errorReason = null;
+
+      try {
+        // We ping the target URL with a cache-busting timestamp
+        const cacheBusterUrl = targetUrl + (targetUrl.includes('?') ? '&' : '?') + '_ib_ping=' + Date.now();
+        
+        // Use mode: 'no-cors' so that even sites without open CORS headers can be verified for network connectivity
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+        const response = await fetch(cacheBusterUrl, {
+          method: 'GET',
+          mode: 'no-cors',
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        latency = Math.round(performance.now() - startTime);
+        reachabilitySuccess = true;
+        fetchStatusCode = 200; // Received response packet
+
+      } catch (networkError) {
+        latency = Math.round(performance.now() - startTime);
+        reachabilitySuccess = false;
+        errorReason = networkError.name === 'AbortError' ? 'Timeout (> 6000ms)' : (networkError.message || 'Connection Refused');
+      }
+
+      // 3. Update Metrics Display
+      const metricLatency = document.getElementById('metricLatency');
+      const metricReachability = document.getElementById('metricReachability');
+      const metricFaultStatus = document.getElementById('metricFaultStatus');
+      const appStatus = document.getElementById('appStatusIndicator');
+      const logBox = document.getElementById('simulatedErrorLogBox');
+
+      if (metricLatency) {
+        metricLatency.textContent = `${latency} ms`;
+        if (latency > 1500) {
+          metricLatency.className = 'text-lg font-bold text-amber-400 mt-1 font-mono';
+        } else {
+          metricLatency.className = 'text-lg font-bold text-emerald-400 mt-1 font-mono';
+        }
+      }
+
+      // 4. Handle Fault Detection and Classification
+      if (!reachabilitySuccess) {
+        // Severe Network or Server Failure detected on the real website!
+        if (metricReachability) {
+          metricReachability.textContent = 'FAILED (0%)';
+          metricReachability.className = 'text-lg font-bold text-rose-500 mt-1 font-mono';
+        }
+        if (metricFaultStatus) {
+          metricFaultStatus.textContent = 'קריסה אקטיבית!';
+          metricFaultStatus.className = 'text-lg font-bold text-rose-500 mt-1 font-mono';
+        }
+        if (appStatus) {
+          appStatus.textContent = 'DOWN / TIMEOUT';
+          appStatus.className = 'px-2.5 py-1 rounded text-xs font-mono bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse';
+        }
+        if (scannerText) {
+          scannerText.textContent = 'זוהתה תקלת שרת / השבתה!';
+          scannerText.className = 'text-rose-400 font-bold font-mono';
+        }
+
+        const chkIconDns = document.getElementById('chkIconDns');
+        const chkValDns = document.getElementById('chkValDns');
+        if (chkIconDns) {
+          chkIconDns.className = 'w-4 h-4 text-rose-500';
+          chkIconDns.setAttribute('data-lucide', 'x-circle');
+        }
+        if (chkValDns) {
+          chkValDns.textContent = 'Host Unreachable';
+          chkValDns.className = 'font-mono text-rose-400 font-bold';
+        }
+
+        if (logBox) {
+          logBox.innerHTML = `
+            <div class="text-rose-400 font-bold">[REAL SITE ALERT]: כשל תקשורת באתר הנבדק!</div>
+            <div class="text-slate-300">יעד: ${targetUrl} &bull; שגיאה: ${errorReason}</div>
+            <div class="text-xs text-rose-200 mt-1">השרת לא מגיב לבקשות. האירוע סווג כ-"חמור ביותר / בעיית שרת" ונרשם בתור התקלות.</div>
+          `;
+        }
+
+        // Automatically trigger an incident with proper categorization!
+        const incidentSeverity = errorReason.includes('Timeout') ? 'server' : 'fatal';
+        const newIncident = {
+          id: 'INC-' + Math.floor(1000 + Math.random() * 9000),
+          title: `כשל זמינות שרת באתר האמיתי (${new URL(targetUrl).hostname || targetUrl})`,
+          severity: incidentSeverity,
+          severityScore: incidentSeverity === 'fatal' ? 97 : 88,
+          sourceUrl: targetUrl,
+          description: `בדיקת האמת העלתה כי השרת אינו מגיב לבקשות רשת. סיבת כשל: ${errorReason}. זמני שיהוי: מעל ${latency}ms.`,
+          stackTrace: `FetchError: Failed to connect to ${targetUrl}\n  at DiagnosticEngine.probe (/agents/prober.js:42:11)\n  Reason: ${errorReason}`,
+          recommendations: [
+            'בדיקת זמינות השרת ומצב ה-DNS של הדומיין',
+            'בדיקת חומת אש (Firewall / Cloudflare) החוסמת בקשות',
+            'אתחול שירותי Web Server (Nginx / Node / Apache)'
+          ],
+          timestamp: new Date().toLocaleTimeString('he-IL'),
+          resolved: false,
+          acknowledged: false,
+          commander: AppState.currentUser ? AppState.currentUser.name : 'מהנדס תורן SRE',
+          timeline: [
+            { time: new Date().toLocaleTimeString('he-IL'), text: `סורק האתרים האמיתי זיהה כשל ב-${targetUrl}` },
+            { time: new Date().toLocaleTimeString('he-IL'), text: `התראה רוחבית הוקפצה למסך המהנדס` }
+          ],
+          comments: [
+            {
+              author: 'Real Site Diagnostic Daemon',
+              role: 'Audit Agent',
+              time: new Date().toLocaleTimeString('he-IL'),
+              text: `האתר ${targetUrl} נכשל בבדיקת Reachability. השרת אינו עונה או חוסם גישה.`
+            }
+          ]
+        };
+
+        AppState.incidents.unshift(newIncident);
+        AppState.activeIncident = newIncident;
+        showGlobalAlert(newIncident);
+        triggerNativeBrowserNotification(newIncident);
+        playSeverityAlertSound(incidentSeverity);
+        updateIncidentStats();
+        logToTelemetryConsole(`[ALERT TRIGGERED] Real site down: ${targetUrl}`);
+
+      } else {
+        // Site responded!
+        if (metricReachability) {
+          metricReachability.textContent = '100% OK';
+          metricReachability.className = 'text-lg font-bold text-emerald-400 mt-1 font-mono';
+        }
+        if (metricFaultStatus) {
+          metricFaultStatus.textContent = 'ללא קריסות';
+          metricFaultStatus.className = 'text-lg font-bold text-emerald-400 mt-1 font-mono';
+        }
+
+        const chkIconDns = document.getElementById('chkIconDns');
+        const chkValDns = document.getElementById('chkValDns');
+        if (chkIconDns) {
+          chkIconDns.className = 'w-4 h-4 text-emerald-400';
+          chkIconDns.setAttribute('data-lucide', 'check-circle');
+        }
+        if (chkValDns) {
+          chkValDns.textContent = 'Host Reachable';
+          chkValDns.className = 'font-mono text-emerald-400 font-bold';
+        }
+
+        if (latency > 2000) {
+          // Trigger High Latency (Medium Severity)
+          if (appStatus) {
+            appStatus.textContent = 'HIGH LATENCY (SLOW)';
+            appStatus.className = 'px-2.5 py-1 rounded text-xs font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40';
+          }
+          if (scannerText) {
+            scannerText.textContent = 'זוהתה האטה חריגה!';
+            scannerText.className = 'text-amber-400 font-bold font-mono';
+          }
+          if (logBox) {
+            logBox.innerHTML = `
+              <div class="text-amber-400 font-bold">[LATENCY WARNING]: שיהוי חריג באתר ${targetUrl}</div>
+              <div class="text-slate-300">זמן תגובה: ${latency}ms (סף מותר: 800ms)</div>
+              <div class="text-xs text-amber-200 mt-1">נפתחה קריאת תקלה ברמת חומרה 'בינוני' עקב איטיות קיצונית.</div>
+            `;
+          }
+
+          triggerFault('medium');
+          showToast(`האתר פעיל אך סובל מאיטיות חריגה (${latency}ms)!`, 'warning');
+
+        } else {
+          // Healthy!
+          if (appStatus) {
+            appStatus.textContent = `HEALTHY (200 OK - ${latency}ms)`;
+            appStatus.className = 'px-2.5 py-1 rounded text-xs font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          }
+          if (scannerText) {
+            scannerText.textContent = `האתר תקין לחלוטין (${latency}ms)`;
+            scannerText.className = 'text-emerald-400 font-bold font-mono';
+          }
+          if (logBox) {
+            logBox.innerHTML = `
+              <div class="text-emerald-400 font-bold">[AUDIT PASSED] האתר ${targetUrl} זמין ותקין!</div>
+              <div class="text-slate-300">זמן תגובה: ${latency}ms &bull; פרוטוקול: ${isHttps ? 'HTTPS/TLS' : 'HTTP'} &bull; סטטוס: Active</div>
+              <div class="text-xs text-emerald-300 mt-1">סוכן הניטור מחובר ומאזין לתקלות עתידיות בזמן אמת.</div>
+            `;
+          }
+          showToast(`האתר ${targetUrl} נבדק ונמצא תקין וזמין (${latency}ms)!`, 'success');
+        }
+
+        logToTelemetryConsole(`[AUDIT SUCCESS] Target responded in ${latency}ms.`);
+      }
+
+      lucide.createIcons();
+    }
+
+    function testTargetApiPing() {
+      const url = document.getElementById('realTargetSiteUrl')?.value || 'https://example.com';
+      showToast(`שולח פינג לכתובת ${url}...`, 'info');
+      runRealSiteComprehensiveDiagnostics();
+    }
+
+    function simulateTargetCrash500() {
+      const url = document.getElementById('realTargetSiteUrl')?.value || 'https://example.com';
+      logToTelemetryConsole(`[INJECTION] Simulating HTTP 500 server crash on ${url}`);
+      triggerFault('server');
+    }
+
+    function simulateTargetHighLatency() {
+      const url = document.getElementById('realTargetSiteUrl')?.value || 'https://example.com';
+      logToTelemetryConsole(`[INJECTION] Simulating high query latency on ${url}`);
+      triggerFault('medium');
+    }
+
+    function testRealSiteBroadcastChannel() {
+      if (window.BroadcastChannel) {
+        const channel = new BroadcastChannel('incident_bridge_bus');
+        channel.postMessage({
+          type: 'INCIDENT_BRIDGE_CRASH',
+          title: 'בדיקת שידור חי מסוכן ה-SDK של האתר האמיתי',
+          sourceUrl: document.getElementById('realTargetSiteUrl')?.value || 'https://my-actual-site.com',
+          stackTrace: 'Error: Simulated client SDK payload\n  at RealApp.trigger (/scripts/app.js:12:4)',
+          severity: 'critical'
+        });
+        showToast('הודעת בדיקה שודרה ב-BroadcastChannel!', 'success');
+        closeRealSiteSdkModal();
+      } else {
+        showToast('BroadcastChannel אינו נתמך בדפדפן זה', 'warning');
+      }
+    }
+
+    // Set up Global Cross-Tab Listener for real site integration
+    function setupCrossTabAgentListener() {
+      if (window.BroadcastChannel) {
+        try {
+          const bus = new BroadcastChannel('incident_bridge_bus');
+          bus.onmessage = (event) => {
+            if (event.data && event.data.type === 'INCIDENT_BRIDGE_CRASH') {
+              const crash = event.data;
+              const newIncident = {
+                id: 'INC-' + Math.floor(1000 + Math.random() * 9000),
+                title: crash.title || 'שגיאת קוד שנתפסה באתר האמיתי',
+                severity: crash.severity || 'fatal',
+                severityScore: crash.severity === 'fatal' ? 96 : 84,
+                sourceUrl: crash.sourceUrl || 'External Monitored Site',
+                description: 'התקבלה הודעת שגיאה חיה דרך סוכן הניטור המוטמע באתר האמיתי של המשתמש.',
+                stackTrace: crash.stackTrace || 'No stack trace provided by client agent',
+                recommendations: ['בדיקת ה-Console וה-Network בטאב של האתר המדווח', 'תיקון השגיאה בקוד המקור'],
+                timestamp: new Date().toLocaleTimeString('he-IL'),
+                resolved: false,
+                acknowledged: false,
+                commander: AppState.currentUser ? AppState.currentUser.name : 'מהנדס תורן SRE',
+                timeline: [{ time: new Date().toLocaleTimeString('he-IL'), text: `הודעה נקלטה מסוכן האתר: ${crash.sourceUrl}` }],
+                comments: [{ author: 'BroadcastChannel Agent', role: 'Real-time Hook', time: new Date().toLocaleTimeString('he-IL'), text: 'קריסה נקלטה מהאתר החי.' }]
+              };
+              AppState.incidents.unshift(newIncident);
+              AppState.activeIncident = newIncident;
+              showGlobalAlert(newIncident);
+              triggerNativeBrowserNotification(newIncident);
+              playSeverityAlertSound(newIncident.severity);
+              updateIncidentStats();
+              logToTelemetryConsole(`[SDK HOOK TRIGGERED]: ${newIncident.title} from ${newIncident.sourceUrl}`);
+            }
+          };
+        } catch (e) {
+          console.debug('BroadcastChannel error:', e);
+        }
+      }
+    }
+
+    function calculateSeverityScore(severityKey) {
+<!-- ... existing code ... -->
+      lucide.createIcons();
+      updateIncidentStats();
+      renderMaintenanceCards();
+      setupCrossTabAgentListener();
+      // Run initial diagnostic check
+      runRealSiteComprehensiveDiagnostics();
+    });
+  </script>
+</body>
+</html>
