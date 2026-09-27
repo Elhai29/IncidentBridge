@@ -1,5 +1,330 @@
-<!-- ... existing code ... -->
-    <!-- VIEW 2: WORKSPACE - THE ACTIVE MONITORED SITE (האתר שבו עובדים והדמיית קריסות) -->
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IncidentBridge Pro - מערכת התראות וקריסות בזמן אמת</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Fonts: Rubik & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Rubik', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            cyber: {
+              dark: '#080c14',
+              darker: '#04070d',
+              card: '#0d1527',
+              border: '#1b2a47',
+              cyan: '#00f0ff',
+              neonPink: '#ff007f',
+              neonGreen: '#00ff66',
+              neonAmber: '#ffaa00',
+              purple: '#8b5cf6'
+            }
+          },
+          animation: {
+            'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'radar-spin': 'spin 4s linear infinite',
+            'beacon': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #04070d;
+      color: #e2e8f0;
+      font-family: 'Rubik', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Cyber Glass & Grid Effects */
+    .cyber-bg {
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.08) 0%, transparent 60%),
+        radial-gradient(circle at 10% 40%, rgba(255, 0, 127, 0.05) 0%, transparent 40%),
+        linear-gradient(to right, rgba(27, 42, 71, 0.2) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(27, 42, 71, 0.2) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+    }
+
+    .glass-panel {
+      background: rgba(13, 21, 39, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(27, 42, 71, 0.8);
+    }
+
+    .glass-panel-glow {
+      box-shadow: 0 0 25px -5px rgba(0, 240, 255, 0.15);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #04070d;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1b2a47;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00f0ff;
+    }
+
+    /* Scanline overlay effect */
+    .scanline {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 4px 100%;
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.35;
+    }
+  </style>
+</head>
+<body class="min-h-screen cyber-bg flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+  <div class="scanline"></div>
+
+  <!-- ========================================== -->
+  <!-- 1. GLOBAL FLOATING CRASH OVERLAY (HUD)    -->
+  <!-- ========================================== -->
+  <div id="globalCrashBanner" class="fixed top-4 left-4 right-4 z-50 transform -translate-y-32 opacity-0 transition-all duration-500 pointer-events-none">
+    <div id="bannerBorderBox" class="max-w-4xl mx-auto rounded-2xl p-4 shadow-2xl backdrop-blur-xl border border-rose-500/80 bg-rose-950/90 text-white flex flex-col sm:flex-row items-center justify-between gap-4 pointer-events-auto">
+      <div class="flex items-center gap-3">
+        <div id="bannerIconWrapper" class="w-12 h-12 rounded-xl bg-rose-600/30 border border-rose-500 flex items-center justify-center shrink-0">
+          <i id="bannerIcon" data-lucide="alert-octagon" class="w-7 h-7 text-rose-400 animate-bounce"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span id="bannerSeverityBadge" class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-rose-500 text-black uppercase tracking-wider">
+              חמור ביותר
+            </span>
+            <span id="bannerTimestamp" class="text-xs text-rose-300 font-mono">12:00:00</span>
+            <span id="bannerSiteTarget" class="text-xs text-slate-300 font-mono bg-black/40 px-2 py-0.5 rounded">example.com</span>
+          </div>
+          <h3 id="bannerTitle" class="font-bold text-base sm:text-lg text-white mt-0.5 leading-snug">
+            קריסה אקטיבית זוהתה באתר המנוטר!
+          </h3>
+          <p id="bannerDesc" class="text-xs sm:text-sm text-slate-300 line-clamp-1">
+            נפילת שירותים מלאה / חריגת זיכרון קריטית נתפסה ע"י סוכן הניטור.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+        <button onclick="openActiveIncidentBridge()" class="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs shadow-lg transition flex items-center gap-1.5">
+          <i data-lucide="radio" class="w-4 h-4"></i> פתח חדר מלחמה
+        </button>
+        <button onclick="acknowledgeActiveIncident()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-600 transition">
+          אשר קבלה (ACK)
+        </button>
+        <button onclick="dismissGlobalBanner()" class="p-2 rounded-xl bg-black/40 hover:bg-black/60 text-slate-400 hover:text-white transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-6 left-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ========================================== -->
+  <!-- 2. GLOBAL NAVIGATION BAR                  -->
+  <!-- ========================================== -->
+  <header class="sticky top-0 z-40 glass-panel border-b border-cyber-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="navigateTo('view-landing')">
+        <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 shadow-lg shadow-cyan-500/20">
+          <i data-lucide="shield-alert" class="w-6 h-6 text-white"></i>
+          <span class="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-cyber-dark animate-pulse"></span>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-extrabold tracking-wide text-white text-base sm:text-lg">IncidentBridge</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">PRO</span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono block -mt-1">Real-time Telemetry & Crash Gateway</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="hidden md:flex items-center gap-1 bg-cyber-darker/60 p-1.5 rounded-xl border border-cyber-border/70 text-xs font-semibold">
+        <button onclick="navigateTo('view-landing')" id="tab-landing" class="nav-tab px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+          <i data-lucide="home" class="w-3.5 h-3.5"></i> ראשי
+        </button>
+        <button onclick="navigateTo('view-workspace')" id="tab-workspace" class="nav-tab px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+          <i data-lucide="cpu" class="w-3.5 h-3.5"></i> אתר העבודה ומעבדה
+        </button>
+        <button onclick="navigateTo('view-queues')" id="tab-queues" class="nav-tab px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5 relative">
+          <i data-lucide="list-ordered" class="w-3.5 h-3.5"></i> תורים ואירועים
+          <span id="queueNavBadge" class="w-2 h-2 rounded-full bg-rose-500 absolute -top-0.5 -right-0.5 hidden"></span>
+        </button>
+        <button onclick="navigateTo('view-warroom')" id="tab-warroom" class="nav-tab px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+          <i data-lucide="flame" class="w-3.5 h-3.5 text-amber-400"></i> חדר מלחמה (War Room)
+        </button>
+      </nav>
+
+      <!-- Right User & Status Controls -->
+      <div class="flex items-center gap-3">
+        <!-- Audio alert toggle -->
+        <button onclick="toggleAudioMute()" id="btnAudioMute" title="צלילי התראות" class="p-2 rounded-xl bg-cyber-darker border border-cyber-border text-slate-400 hover:text-cyan-400 transition">
+          <i id="audioIcon" data-lucide="volume-2" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Browser Notification Permission Requester -->
+        <button onclick="requestBrowserNotificationPermission()" id="btnNotificationReq" title="הפעלת התראות מערכת בדפדפן" class="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-cyber-darker border border-cyber-border text-xs text-slate-300 hover:border-cyan-500 transition">
+          <i data-lucide="bell-ring" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span class="text-[11px]">התראות דפדפן</span>
+        </button>
+
+        <!-- User Profile / Auth Button -->
+        <div id="navAuthArea">
+          <button onclick="openAuthModal('login')" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black font-bold text-xs shadow-md transition flex items-center gap-1.5">
+            <i data-lucide="log-in" class="w-3.5 h-3.5"></i> התחברות / הרשמה
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================== -->
+  <!-- 3. VIEWS CONTAINER                         -->
+  <!-- ========================================== -->
+  <main class="flex-grow flex flex-col">
+
+    <!-- VIEW 1: LANDING PAGE (מסך פתיחה טכנולוגי) -->
+    <section id="view-landing" class="view-section py-12 lg:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-grow flex flex-col justify-center">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        
+        <div class="lg:col-span-7 space-y-6">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 text-xs font-mono">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+            פלטפורמת ניטור ותגובת חירום SRE בזמן אמת
+          </div>
+
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight">
+            זיהוי קריסות ותקלות קוד <br>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-300 to-pink-500">
+              בכל אתר שבו אתה עובד.
+            </span>
+          </h1>
+
+          <p class="text-base sm:text-lg text-slate-300 max-w-2xl leading-relaxed">
+            חבר את האתר האמיתי שלך, הטמע את סוכן הניטור (Agent SDK) ב-4 שורות קוד, וקבל התראות מתפרצות בזמן אמת המסווגות בדיוק לפי חומרת התקלה – החל משגיאות שרת ו-Data Corruption ועד לקריסות קוד טוטאליות.
+          </p>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-wrap items-center gap-4 pt-2">
+            <button onclick="navigateTo('view-workspace')" class="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm shadow-xl shadow-cyan-500/25 transition transform hover:-translate-y-0.5 flex items-center gap-2">
+              <i data-lucide="play" class="w-4 h-4 fill-current"></i> כנס לאתר המעבדה והניטור
+            </button>
+            <button onclick="openAuthModal('signup')" class="px-6 py-3.5 rounded-2xl glass-panel hover:bg-slate-800 text-white font-bold text-sm border border-cyber-border hover:border-slate-500 transition flex items-center gap-2">
+              <i data-lucide="user-plus" class="w-4 h-4 text-cyan-400"></i> הרשמת מהנדס למערכת
+            </button>
+            <button onclick="openRealSiteSdkModal()" class="px-4 py-3.5 rounded-2xl bg-cyber-darker hover:bg-slate-900 text-slate-300 font-mono text-xs border border-cyber-border transition flex items-center gap-1.5">
+              <i data-lucide="code" class="w-4 h-4 text-pink-400"></i> קוד SDK לאתר שלך
+            </button>
+          </div>
+
+          <!-- Live Feature Highlights -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-6 border-t border-cyber-border/70">
+            <div class="p-3 rounded-xl bg-cyber-darker/60 border border-cyber-border">
+              <div class="text-cyan-400 font-bold text-lg font-mono">&lt; 15ms</div>
+              <div class="text-xs text-slate-400">זיהוי קריסה מיידי</div>
+            </div>
+            <div class="p-3 rounded-xl bg-cyber-darker/60 border border-cyber-border">
+              <div class="text-pink-400 font-bold text-lg font-mono">6 רמות</div>
+              <div class="text-xs text-slate-400">סיווג חומרה מתקדם</div>
+            </div>
+            <div class="p-3 rounded-xl bg-cyber-darker/60 border border-cyber-border">
+              <div class="text-emerald-400 font-bold text-lg font-mono">Cloud / Local</div>
+              <div class="text-xs text-slate-400">תמיכה מלאה ב-Cloudflare</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Side: Cyber Radar / Live Incident Simulation Preview -->
+        <div class="lg:col-span-5">
+          <div class="glass-panel p-6 rounded-3xl border border-cyber-border relative overflow-hidden shadow-2xl">
+            <div class="flex items-center justify-between pb-4 border-b border-cyber-border">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-rose-500 animate-pulse"></span>
+                <span class="text-xs font-mono font-bold text-slate-300">LIVE BRIDGE ENGINE</span>
+              </div>
+              <span class="text-[11px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800">
+                ACTIVE
+              </span>
+            </div>
+
+            <div class="py-6 space-y-3 font-mono text-xs">
+              <div class="p-3 rounded-xl bg-rose-950/30 border border-rose-800/40 text-rose-300 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                  <i data-lucide="flame" class="w-4 h-4 text-rose-500"></i>
+                  <span>חמור ביותר (Fatal / P0)</span>
+                </span>
+                <span class="font-bold text-rose-400">ניקוד: 98</span>
+              </div>
+              <div class="p-3 rounded-xl bg-amber-950/30 border border-amber-800/40 text-amber-300 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                  <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i>
+                  <span>קריטי (Critical / P1)</span>
+                </span>
+                <span class="font-bold text-amber-400">ניקוד: 88</span>
+              </div>
+              <div class="p-3 rounded-xl bg-pink-950/30 border border-pink-800/40 text-pink-300 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                  <i data-lucide="server" class="w-4 h-4 text-pink-500"></i>
+                  <span>בעיית שרת (Server Issue 500)</span>
+                </span>
+                <span class="font-bold text-pink-400">ניקוד: 82</span>
+              </div>
+              <div class="p-3 rounded-xl bg-purple-950/30 border border-purple-800/40 text-purple-300 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                  <i data-lucide="binary" class="w-4 h-4 text-purple-400"></i>
+                  <span>מידע פגום (Data Corruption)</span>
+                </span>
+                <span class="font-bold text-purple-300">בדיקת JSON</span>
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <button onclick="triggerFault('fatal')" class="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg transition flex items-center justify-center gap-2">
+                <i data-lucide="zap" class="w-4 h-4"></i> בצע הדמיית קריסה מיידית על המסך
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 2: WORKSPACE - THE ACTIVE MONITORED SITE -->
     <section id="view-workspace" class="view-section hidden py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-grow">
       
       <!-- Top Workspace Controls -->
@@ -66,7 +391,7 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        <!-- Left Column: The Monitored Work App (סימולציית האתר שבו המשתמש עובד) -->
+        <!-- Left Column: The Monitored Work App -->
         <div class="lg:col-span-8 flex flex-col gap-6">
           
           <div class="glass-panel rounded-2xl border border-cyber-border overflow-hidden shadow-xl flex flex-col">
@@ -201,13 +526,458 @@
 
         <!-- Right Column: Incident Trigger Dashboard (סרגל הזרקת סוגי תקלות מתוייגות) -->
         <div class="lg:col-span-4 flex flex-col gap-5">
-<!-- ... existing code ... -->
-  <!-- MODAL: DATA CORRUPTION JSON UPLOAD & SERVER ANALYZER -->
-  <div id="dataCorruptionModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden transition-all duration-300">
-<!-- ... existing code ... -->
+          <div class="glass-panel p-5 rounded-2xl border border-cyber-border">
+            <div class="flex items-center gap-2 pb-3 border-b border-cyber-border mb-4">
+              <i data-lucide="radio" class="w-4 h-4 text-cyan-400"></i>
+              <h3 class="font-bold text-white text-sm">הזרקת תקלות לפי סיווג חומרה</h3>
+            </div>
+            <p class="text-xs text-slate-400 mb-4">
+              בחר סוג תקלה להדמיה מיידית. המערכת תקפיץ התראת HUD מעל המסך ותרשום את האירוע בתור התקלות.
+            </p>
+
+            <div class="space-y-2.5">
+              <!-- Fatal / חמור ביותר -->
+              <button onclick="triggerFault('fatal')" class="w-full p-3 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-700/60 text-right transition flex items-center justify-between group">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-rose-600/30 text-rose-400 flex items-center justify-center">
+                    <i data-lucide="skull" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold text-rose-200">חמור ביותר (Fatal / P0)</div>
+                    <div class="text-[10px] text-slate-400">Null Pointer / Memory Crash</div>
+                  </div>
+                </div>
+                <span class="text-xs font-mono font-bold text-rose-400">Score: 98</span>
+              </button>
+
+              <!-- Critical / קריטי -->
+              <button onclick="triggerFault('critical')" class="w-full p-3 rounded-xl bg-orange-950/40 hover:bg-orange-900/60 border border-orange-700/60 text-right transition flex items-center justify-between group">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-orange-600/30 text-orange-400 flex items-center justify-center">
+                    <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold text-orange-200">קריטי (Critical / P1)</div>
+                    <div class="text-[10px] text-slate-400">נפילת שירות סליקה ותשלומים</div>
+                  </div>
+                </div>
+                <span class="text-xs font-mono font-bold text-orange-400">Score: 89</span>
+              </button>
+
+              <!-- Server Issue / בעיית שרת -->
+              <button onclick="triggerFault('server')" class="w-full p-3 rounded-xl bg-pink-950/40 hover:bg-pink-900/60 border border-pink-700/60 text-right transition flex items-center justify-between group">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-pink-600/30 text-pink-400 flex items-center justify-center">
+                    <i data-lucide="server-crash" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold text-pink-200">בעיית שרת (Server Issue 500)</div>
+                    <div class="text-[10px] text-slate-400">Nginx 502 / Database Timeout</div>
+                  </div>
+                </div>
+                <span class="text-xs font-mono font-bold text-pink-400">Score: 82</span>
+              </button>
+
+              <!-- Data Corruption / מידע פגום -->
+              <button onclick="openDataCorruptionModal()" class="w-full p-3 rounded-xl bg-purple-950/40 hover:bg-purple-900/60 border border-purple-600/60 text-right transition flex items-center justify-between group">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-purple-600/30 text-purple-300 flex items-center justify-center">
+                    <i data-lucide="file-json" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold text-purple-200">מידע פגום (Data Corruption)</div>
+                    <div class="text-[10px] text-slate-400">בדיקת קובץ JSON פגום</div>
+                  </div>
+                </div>
+                <span class="text-xs font-mono font-bold text-purple-400">קובץ JSON</span>
+              </button>
+
+              <!-- Medium / בינוני -->
+              <button onclick="triggerFault('medium')" class="w-full p-3 rounded-xl bg-amber-950/40 hover:bg-amber-900/60 border border-amber-700/60 text-right transition flex items-center justify-between group">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-amber-600/30 text-amber-400 flex items-center justify-center">
+                    <i data-lucide="clock" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold text-amber-200">בינוני (Medium / P2)</div>
+                    <div class="text-[10px] text-slate-400">שאילתות איטיות &gt; 2.5 שניות</div>
+                  </div>
+                </div>
+                <span class="text-xs font-mono font-bold text-amber-400">Score: 56</span>
+              </button>
+
+              <!-- Minor / קל -->
+              <button onclick="triggerFault('minor')" class="w-full p-3 rounded-xl bg-blue-950/40 hover:bg-blue-900/60 border border-blue-700/60 text-right transition flex items-center justify-between group">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-blue-600/30 text-blue-400 flex items-center justify-center">
+                    <i data-lucide="info" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold text-blue-200">קל (Minor / P3)</div>
+                    <div class="text-[10px] text-slate-400">אזהרת CSS / שגיאת UI לא חוסמת</div>
+                  </div>
+                </div>
+                <span class="text-xs font-mono font-bold text-blue-400">Score: 24</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Cloudflare Worker Probing Widget -->
+          <div class="glass-panel p-4 rounded-2xl border border-cyan-500/20 text-xs space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white flex items-center gap-1.5">
+                <i data-lucide="cloud" class="w-4 h-4 text-cyan-400"></i> בדיקת שרת ענן (Cloudflare)
+              </span>
+              <span class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 text-[10px] font-mono">Edge Ready</span>
+            </div>
+            <p class="text-slate-400 text-[11px]">
+              רוצה סריקה עוקפת CORS משרתי Cloudflare? הזן כתובת Worker:
+            </p>
+            <input type="text" id="customCloudflareWorkerEndpoint" placeholder="https://incidentbridge.elhai2011.workers.dev" class="w-full bg-cyber-darker border border-slate-800 rounded-lg p-2 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500">
+            <button onclick="saveCloudflareWorkerEndpoint()" class="w-full py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">
+              שמור הגדרות ענן
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 3: QUEUES & INCIDENTS (תור תקלות ותור משימות תחזוקה) -->
+    <section id="view-queues" class="view-section hidden py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-grow">
+      
+      <!-- View Header -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-md bg-rose-950 text-rose-400 border border-rose-800 text-xs font-mono font-bold">
+              Dual Queue Architecture
+            </span>
+            <span class="text-xs text-slate-400 font-mono">Real-time SRE Incident Pipeline</span>
+          </div>
+          <h2 class="text-2xl font-bold text-white mt-1">תורי אירועים ותחזוקת מערכת</h2>
+          <p class="text-sm text-slate-400">מעקב, סינון וטיפול בתקלות מערכת (Faults) ובמשימות שדרוג יזומות (Maintenance Tasks).</p>
+        </div>
+
+        <!-- Filter and Action Buttons -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Smart Status Filter Tabs -->
+          <div class="bg-cyber-darker border border-cyber-border rounded-xl p-1 flex items-center text-xs">
+            <button onclick="setStatusFilter('all')" id="filterBtnAll" class="px-3 py-1.5 rounded-lg bg-cyan-600 text-white font-bold transition">
+              הכל (<span id="countFilterAll">0</span>)
+            </button>
+            <button onclick="setStatusFilter('open')" id="filterBtnOpen" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">
+              פתוחות בלבד (<span id="countFilterOpen">0</span>)
+            </button>
+            <button onclick="setStatusFilter('ack')" id="filterBtnAck" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">
+              בטיפול (<span id="countFilterAck">0</span>)
+            </button>
+            <button onclick="setStatusFilter('resolved')" id="filterBtnResolved" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">
+              נפתרו (<span id="countFilterResolved">0</span>)
+            </button>
+          </div>
+
+          <!-- Safe Clear: Only Clears Resolved -->
+          <button onclick="clearResolvedIncidentsOnly()" title="מנקה רק אירועים שנפתרו ומשאיר תקלות חמורות" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+            <i data-lucide="check-check" class="w-4 h-4 text-emerald-400"></i> נקה רק תקלות שנפתרו
+          </button>
+
+          <!-- Restore Default/Backup Incidents -->
+          <button onclick="restoreDefaultIncidents()" title="שחזר תקלות קודמות" class="px-3 py-2 rounded-xl bg-cyber-darker hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs border border-cyber-border transition flex items-center gap-1">
+            <i data-lucide="undo" class="w-3.5 h-3.5"></i> שחזר
+          </button>
+        </div>
+      </div>
+
+      <!-- Severity Filter Quick Tags -->
+      <div class="flex items-center gap-2 mb-4 overflow-x-auto pb-1 text-xs">
+        <span class="text-slate-400 font-mono text-[11px] shrink-0">סינון לפי חומרה:</span>
+        <button onclick="setSeverityFilter('all')" id="sevFilterAll" class="px-2.5 py-1 rounded-lg bg-cyan-950 text-cyan-400 border border-cyan-800 font-bold shrink-0">הכל</button>
+        <button onclick="setSeverityFilter('fatal')" id="sevFilterFatal" class="px-2.5 py-1 rounded-lg bg-cyber-darker text-rose-400 border border-slate-800 shrink-0">חמור ביותר</button>
+        <button onclick="setSeverityFilter('critical')" id="sevFilterCritical" class="px-2.5 py-1 rounded-lg bg-cyber-darker text-orange-400 border border-slate-800 shrink-0">קריטי</button>
+        <button onclick="setSeverityFilter('server')" id="sevFilterServer" class="px-2.5 py-1 rounded-lg bg-cyber-darker text-pink-400 border border-slate-800 shrink-0">בעיית שרת</button>
+        <button onclick="setSeverityFilter('data_corruption')" id="sevFilterDataCorruption" class="px-2.5 py-1 rounded-lg bg-cyber-darker text-purple-400 border border-slate-800 shrink-0">מידע פגום</button>
+        <button onclick="setSeverityFilter('medium')" id="sevFilterMedium" class="px-2.5 py-1 rounded-lg bg-cyber-darker text-amber-400 border border-slate-800 shrink-0">בינוני</button>
+        <button onclick="setSeverityFilter('minor')" id="sevFilterMinor" class="px-2.5 py-1 rounded-lg bg-cyber-darker text-blue-400 border border-slate-800 shrink-0">קל</button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left: FAULT QUEUE (תור תקלות) -->
+        <div class="lg:col-span-8 space-y-4">
+          <div class="glass-panel p-4 rounded-2xl border border-cyber-border flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="alert-octagon" class="w-5 h-5 text-rose-500"></i>
+              <h3 class="font-bold text-white text-base">תור תקלות וקריסות (Fault Queue)</h3>
+            </div>
+            <span id="faultQueueCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-rose-950 text-rose-400 border border-rose-800">
+              0 אירועים
+            </span>
+          </div>
+
+          <div id="incidentsListContainer" class="space-y-3">
+            <!-- Dynamic Incident Cards Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- Right: MAINTENANCE QUEUE (תור משימות תחזוקה) -->
+        <div class="lg:col-span-4 space-y-4">
+          <div class="glass-panel p-4 rounded-2xl border border-cyber-border flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="wrench" class="w-5 h-5 text-cyan-400"></i>
+              <h3 class="font-bold text-white text-base">תור משימות תחזוקה (Maintenance)</h3>
+            </div>
+            <button onclick="openNewMaintenanceModal()" class="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <div id="maintenanceListContainer" class="space-y-3">
+            <!-- Dynamic Maintenance Cards Rendered via JS -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 4: WAR ROOM / INCIDENT BRIDGE (חדר מלחמה לניהול אירוע) -->
+    <section id="view-warroom" class="view-section hidden py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-grow">
+      
+      <!-- Top War Room Controls -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+            <span class="text-xs font-mono text-rose-400 font-bold uppercase tracking-wider">LIVE INCIDENT COMMAND BRIDGE</span>
+          </div>
+          <h2 id="warroomIncidentTitle" class="text-2xl font-bold text-white mt-1">אירוע פעיל: קריסת שירותים באתר</h2>
+          <p id="warroomIncidentMeta" class="text-xs text-slate-400 font-mono">מזהה: INC-8492 &bull; מפקד אירוע: מהנדס SRE תורן &bull; זמן גילוי: 12:00</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button onclick="resolveCurrentActiveIncident()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg transition flex items-center gap-1.5">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i> סגור תקלה (Resolve Incident)
+          </button>
+          <button onclick="navigateTo('view-queues')" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition">
+            חזרה לתורים
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Incident Timeline & RCA Details -->
+        <div class="lg:col-span-8 space-y-6">
+          
+          <!-- Stack Trace & Technical Details -->
+          <div class="glass-panel p-5 rounded-2xl border border-cyber-border">
+            <h4 class="text-xs font-bold text-slate-300 font-mono mb-3 flex items-center gap-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-cyan-400"></i> יומן שגיאה טכני (Stack Trace & Exception Dump)
+            </h4>
+            <pre id="warroomStackTraceBox" class="p-3.5 bg-cyber-darker rounded-xl border border-slate-800 text-xs font-mono text-rose-300 overflow-x-auto leading-relaxed max-h-56">
+TypeError: Cannot read properties of undefined (reading 'processPayment')
+  at CheckoutService.executeOrder (/src/services/billing.js:142:18)
+  at async PaymentGateway.handleTransaction (/src/controllers/api.js:89:12)
+  at Server.dispatchRequest (/node_modules/express/router.js:45:5)
+            </pre>
+          </div>
+
+          <!-- Recommendations & Fix Guide -->
+          <div class="glass-panel p-5 rounded-2xl border border-cyber-border">
+            <h4 class="text-xs font-bold text-slate-300 font-mono mb-3 flex items-center gap-2">
+              <i data-lucide="lightbulb" class="w-4 h-4 text-amber-400"></i> המלצות מערכת ותוכנית תיקון מיידית
+            </h4>
+            <div id="warroomRecommendationsBox" class="space-y-2 text-xs text-slate-300">
+              <div class="p-3 bg-cyber-darker rounded-xl border border-slate-800 flex items-start gap-2">
+                <i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+                <span>בדיקת תקינות תעודת ה-SSL של שרת היעד ואימות פרוטוקול TLS</span>
+              </div>
+              <div class="p-3 bg-cyber-darker rounded-xl border border-slate-800 flex items-start gap-2">
+                <i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+                <span>אתחול מופע השרת (Restart Pod / Container) והזרקת תנועה מחדש</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chronological Audit Trail & Timeline -->
+          <div class="glass-panel p-5 rounded-2xl border border-cyber-border">
+            <h4 class="text-xs font-bold text-slate-300 font-mono mb-4 flex items-center gap-2">
+              <i data-lucide="history" class="w-4 h-4 text-cyan-400"></i> ציר זמן אירוע (Incident Timeline)
+            </h4>
+            <div id="warroomTimelineContainer" class="space-y-3 text-xs">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Incident Comms & Chat -->
+        <div class="lg:col-span-4 flex flex-col gap-5">
+          <div class="glass-panel p-5 rounded-2xl border border-cyber-border flex-grow flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-cyber-border mb-3">
+                <h4 class="text-xs font-bold text-white flex items-center gap-2">
+                  <i data-lucide="message-square" class="w-4 h-4 text-cyan-400"></i> ערוץ תקשורת מהנדסים (Bridge Comms)
+                </h4>
+                <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded">Active War Room</span>
+              </div>
+              <div id="warroomChatContainer" class="space-y-2.5 h-64 overflow-y-auto pr-1 text-xs">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-cyber-border mt-3">
+              <div class="flex items-center gap-2">
+                <input type="text" id="warroomChatInput" placeholder="רשום עדכון לצוות או תיעוד פעולה..." class="w-full bg-cyber-darker border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400" onkeydown="if(event.key === 'Enter') sendWarroomMessage()">
+                <button onclick="sendWarroomMessage()" class="p-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white transition shrink-0">
+                  <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- 4. MODALS & POPUPS                        -->
+  <!-- ========================================== -->
+
+  <!-- MODAL: LOGIN & SIGN-UP -->
+  <div id="authModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-md rounded-3xl border border-cyber-border shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+      
+      <!-- Close Button -->
+      <button onclick="closeAuthModal()" class="absolute top-4 left-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Auth Switch Tabs -->
+      <div class="flex items-center justify-center gap-2 mb-6">
+        <button onclick="switchAuthTab('login')" id="btnAuthTabLogin" class="px-5 py-2 rounded-xl text-xs font-bold transition bg-cyan-600 text-white">
+          כניסה (Log In)
+        </button>
+        <button onclick="switchAuthTab('signup')" id="btnAuthTabSignup" class="px-5 py-2 rounded-xl text-xs font-bold transition text-slate-400 hover:text-white">
+          הרשמת מהנדס (Sign Up)
+        </button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form id="formLogin" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+        <div>
+          <label class="text-xs font-mono text-slate-300 block mb-1">כתובת אימייל מקצועית:</label>
+          <input type="email" id="loginEmail" required value="engineer@incidentbridge.io" class="w-full bg-cyber-darker border border-cyber-border rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+        </div>
+        <div>
+          <label class="text-xs font-mono text-slate-300 block mb-1">סיסמת אבטחה:</label>
+          <input type="password" id="loginPassword" required value="••••••••••••" class="w-full bg-cyber-darker border border-cyber-border rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+        </div>
+        <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-xs shadow-lg transition">
+          התחבר למערכת הניטור
+        </button>
+      </form>
+
+      <!-- SIGNUP FORM -->
+      <form id="formSignup" onsubmit="handleSignupSubmit(event)" class="space-y-3.5 hidden">
+        <div>
+          <label class="text-xs font-mono text-slate-300 block mb-1">שם מלא:</label>
+          <input type="text" id="signupName" required placeholder="ישראל ישראלי" class="w-full bg-cyber-darker border border-cyber-border rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+        </div>
+        <div>
+          <label class="text-xs font-mono text-slate-300 block mb-1">כתובת אימייל:</label>
+          <input type="email" id="signupEmail" required placeholder="user@company.com" class="w-full bg-cyber-darker border border-cyber-border rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+        </div>
+        <div>
+          <label class="text-xs font-mono text-slate-300 block mb-1">תפקיד טכנולוגי:</label>
+          <select id="signupRole" class="w-full bg-cyber-darker border border-cyber-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-400">
+            <option value="SRE / DevOps Engineer">SRE / DevOps Engineer</option>
+            <option value="Incident Commander">Incident Commander (מפקד אירוע)</option>
+            <option value="Full-Stack Developer">Full-Stack Developer</option>
+            <option value="Cyber Security Analyst">Cyber Security Analyst</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-mono text-slate-300 block mb-1">סיסמה מאובטחת:</label>
+          <input type="password" id="signupPassword" required placeholder="לפחות 8 תווים" class="w-full bg-cyber-darker border border-cyber-border rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+        </div>
+        <div class="flex items-center gap-2 pt-1">
+          <input type="checkbox" id="signupPermNotify" checked class="w-4 h-4 rounded text-cyan-500 bg-cyber-darker border-slate-700">
+          <label for="signupPermNotify" class="text-[11px] text-slate-300">אשר הקפצת התראות דפדפן חוצות-אתרים בזמן קריסה</label>
+        </div>
+        <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-black font-extrabold text-xs shadow-lg transition">
+          השלם הרשמה והפעל סוכן ניטור
+        </button>
+      </form>
+
+    </div>
   </div>
 
-  <!-- MODAL: REAL-SITE SDK INTEGRATION (קוד הטמעה לאתר האמיתי) -->
+  <!-- MODAL: DATA CORRUPTION JSON UPLOAD & SERVER ANALYZER -->
+  <div id="dataCorruptionModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-2xl rounded-3xl border border-purple-500/50 shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+      
+      <!-- Close Button -->
+      <button onclick="closeDataCorruptionModal()" class="absolute top-4 left-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="flex items-center gap-3 pb-4 border-b border-cyber-border mb-4">
+        <div class="w-10 h-10 rounded-xl bg-purple-950/80 border border-purple-500/40 text-purple-400 flex items-center justify-center">
+          <i data-lucide="binary" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">פתיחת פנייה: מידע פגום (Data Corruption)</h3>
+          <p class="text-xs text-slate-400">העלה קובץ JSON לבדיקת תקינות צד שרת וגילוי קורופציה</p>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <!-- Sample Chooser Buttons -->
+        <div>
+          <label class="text-xs font-mono text-slate-300 block mb-1.5">בחר קובץ להדמיה או העלה קובץ מקומי:</label>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="loadSampleCorruptJson()" class="px-3 py-1.5 rounded-lg bg-purple-950/70 hover:bg-purple-900 border border-purple-800 text-purple-300 text-xs font-mono transition">
+              טען JSON פגום (שגיאת מבנה/Null)
+            </button>
+            <button onclick="loadSampleValidJson()" class="px-3 py-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs font-mono transition">
+              טען JSON תקין לחלוטין
+            </button>
+            <label class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono cursor-pointer transition flex items-center gap-1">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i> בחר קובץ מהמחשב
+              <input type="file" id="localJsonFileInput" accept=".json" class="hidden" onchange="handleFileUpload(event)">
+            </label>
+          </div>
+        </div>
+
+        <!-- JSON Code Editor Area -->
+        <div>
+          <label class="text-xs font-mono text-slate-400 block mb-1">תוכן הקובץ הנבדק (JSON Payload):</label>
+          <textarea id="jsonPayloadArea" rows="7" class="w-full bg-cyber-darker border border-slate-800 rounded-xl p-3 text-xs font-mono text-cyan-300 focus:outline-none focus:border-purple-500 leading-relaxed"></textarea>
+        </div>
+
+        <!-- Server Decision Preview Box -->
+        <div id="serverAnalysisResultBox" class="p-3.5 rounded-xl bg-cyber-darker border border-slate-800 text-xs space-y-1 font-mono">
+          <span class="text-slate-400">סטטוס בדיקת שרת: ממתין לשיגור ואימות קובץ...</span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button onclick="closeDataCorruptionModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+            ביטול
+          </button>
+          <button onclick="submitDataCorruptionInvestigation()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg transition flex items-center gap-2">
+            <i data-lucide="cpu" class="w-4 h-4"></i> שגר לבדיקת שרת ופתח תקרית
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: REAL-SITE SDK INTEGRATION -->
   <div id="realSiteSdkModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden transition-all duration-300">
     <div class="glass-panel w-full max-w-2xl rounded-3xl border border-cyan-500/50 shadow-2xl p-6 sm:p-8 relative overflow-hidden">
       <div class="flex items-start justify-between pb-3 border-b border-cyber-border">
@@ -242,7 +1012,6 @@
       severity: 'fatal',
       timestamp: new Date().toISOString()
     };
-    // שידור מיידי לכל הטאבים והאתרים של המהנדס
     if (window.BroadcastChannel) {
       new BroadcastChannel('incident_bridge_bus').postMessage(payload);
     }
@@ -284,16 +1053,556 @@
     </div>
   </div>
 
-  <!-- FOOTER WITH AUTHORS SIGNATURE -->
-<!-- ... existing code ... -->
-```
-```html:IncidentBridge Pro - מערכת התראות וקריסות בזמן אמת:incident_bridge.html
-<!-- ... existing code ... -->
+  <!-- ========================================== -->
+  <!-- 5. FOOTER WITH REQUIRED AUTHORS SIGNATURE -->
+  <!-- ========================================== -->
+  <footer class="glass-panel border-t border-cyber-border mt-12 py-6 px-4">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+      
+      <!-- Core Dev Team Signature -->
+      <div class="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+        <span class="text-slate-500 font-mono">פותח ומתוחזק בגאווה ע"י צוות הפיתוח:</span>
+        <span class="px-2.5 py-1 rounded-md bg-cyan-950 text-cyan-300 border border-cyan-800/80 font-bold font-mono">
+          דניאל
+        </span>
+        <span class="px-2.5 py-1 rounded-md bg-indigo-950 text-indigo-300 border border-indigo-800/80 font-bold font-mono">
+          רועי
+        </span>
+        <span class="px-2.5 py-1 rounded-md bg-purple-950 text-purple-300 border border-purple-800/80 font-bold font-mono">
+          אופיר
+        </span>
+        <span class="px-2.5 py-1 rounded-md bg-emerald-950 text-emerald-300 border border-emerald-800/80 font-bold font-mono">
+          אלחי
+        </span>
+      </div>
+
+      <!-- System Health Indicator -->
+      <div class="flex items-center gap-2 font-mono text-[11px]">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        <span class="text-slate-300">IncidentBridge Core: Systems Operational (UTF-8 Verified)</span>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- 6. LOGIC & APPLICATION ENGINE (VANILLA JS) -->
+  <!-- ========================================== -->
+  <script>
+    /* GLOBAL APPLICATION STATE */
+    const AppState = {
+      currentUser: {
+        name: 'מהנדס תורן SRE',
+        email: 'engineer@incidentbridge.io',
+        role: 'SRE / DevOps Engineer'
+      },
+      activeTab: 'view-landing',
+      audioMuted: false,
+      activeIncident: null,
+      statusFilter: 'all',
+      severityFilter: 'all',
+      cloudflareWorkerEndpoint: '',
+      incidents: [
+        {
+          id: 'INC-9012',
+          title: 'קריסת שרת קריטית (Out Of Memory / NullPointer)',
+          severity: 'fatal',
+          severityScore: 98,
+          sourceUrl: 'https://example.com/api/v2/checkout',
+          description: 'זיכרון השרת חרג מ-100%, תהליך Node.js קרס ולא חזר לפעילות תקינה.',
+          stackTrace: 'FatalError: JavaScript heap out of memory\n  at Buffer.alloc (node:buffer:410:17)\n  at QueryEngine.loadIndex (/app/database.js:108:9)',
+          recommendations: ['הקצאת משאבי זיכרון נוספים', 'אתחול Pods ב-Kubernetes', 'בדיקת דליפת זיכרון בלולאות'],
+          timestamp: '12:04:11',
+          resolved: false,
+          acknowledged: true,
+          commander: 'אלחי',
+          timeline: [
+            { time: '12:04:11', text: 'סוכן הניטור זיהה קריסה טוטאלית' },
+            { time: '12:05:00', text: 'אושר קבלה (ACK) ע"י אלחי' }
+          ],
+          comments: [
+            { author: 'אלחי', role: 'DevOps', time: '12:05:30', text: 'בודק כרגע את יומני ה-Heap dump של השרת.' }
+          ]
+        },
+        {
+          id: 'INC-8419',
+          title: 'כשל בשירותי סליקה ותשלום (Stripe / Meshulam Gateway)',
+          severity: 'critical',
+          severityScore: 89,
+          sourceUrl: 'https://example.com/checkout',
+          description: 'התקבלו מעל 40 שגיאות ב-5 דקות עבור לקוחות המנסים לסלוק כרטיסי אשראי.',
+          stackTrace: 'PaymentGatewayException: 504 Gateway Timeout connecting to payment processor',
+          recommendations: ['בדיקת סטטוס ספק הסליקה החיצוני', 'מעבר ל-Fallback Gateway חלופי'],
+          timestamp: '11:45:00',
+          resolved: false,
+          acknowledged: false,
+          commander: 'רועי',
+          timeline: [{ time: '11:45:00', text: 'התראה ראשונית נקלטה ב-Gateway' }],
+          comments: []
+        },
+        {
+          id: 'INC-7104',
+          title: 'שגיאת שרת 500 בבסיס הנתונים (Database Deadlock)',
+          severity: 'server',
+          severityScore: 82,
+          sourceUrl: 'https://example.com/api/orders',
+          description: 'נעילת טבלאות הדדית גרמה לשרת ה-API להחזיר שגיאת HTTP 500 ללקוחות.',
+          stackTrace: 'DBDeadlockException: Transaction (Process ID 84) was deadlocked on lock resources with another process',
+          recommendations: ['שחרור טרנזקציות תקועות', 'ביצוע אופטימיזציה לאינדקסים בטבלה'],
+          timestamp: '10:12:33',
+          resolved: true,
+          acknowledged: true,
+          commander: 'דניאל',
+          timeline: [
+            { time: '10:12:33', text: 'השרת דיווח על שגיאות 500' },
+            { time: '10:20:15', text: 'דניאל שחרר את הטרנזקציות התקועות' },
+            { time: '10:22:00', text: 'האירוע נסגר בהצלחה' }
+          ],
+          comments: [
+            { author: 'דניאל', role: 'Database Admin', time: '10:21:00', text: 'הטבלאות שוחררו והביצועים חזרו לתקן.' }
+          ]
+        }
+      ],
+      maintenanceTasks: [
+        {
+          id: 'MNT-101',
+          title: 'חידוש תעודת הצפנה (TLS/SSL Auto-Renew)',
+          system: 'Edge Reverse Proxy',
+          window: 'היום, 02:00 - 02:15',
+          status: 'Scheduled',
+          owner: 'אופיר'
+        },
+        {
+          id: 'MNT-102',
+          title: 'שדרוג גרסת בסיס הנתונים PostgreSQL ל-16.2',
+          system: 'Primary DB Cluster',
+          window: 'מחר, 03:00 - 04:00',
+          status: 'Pending Approval',
+          owner: 'רועי'
+        }
+      ]
+    };
+
+    // Backup copy for restoration
+    const DefaultIncidentsBackup = JSON.parse(JSON.stringify(AppState.incidents));
+
+    /* AUDIO SYNTHESIZER (NO EXTERNAL SOUND URLS) */
+    let audioCtx = null;
+    function playSeverityAlertSound(severity) {
+      if (AppState.audioMuted) return;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (severity === 'fatal') {
+          // Urgent two-tone siren
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(880, now);
+          osc.frequency.exponentialRampToValueAtTime(440, now + 0.15);
+          osc.frequency.setValueAtTime(880, now + 0.3);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+          osc.start(now);
+          osc.stop(now + 0.5);
+        } else if (severity === 'critical') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(650, now);
+          osc.frequency.exponentialRampToValueAtTime(320, now + 0.25);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } else {
+          // Warning chime
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(260, now + 0.2);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        }
+      } catch (e) {
+        console.debug('Audio context warning:', e);
+      }
+    }
+
+    function toggleAudioMute() {
+      AppState.audioMuted = !AppState.audioMuted;
+      const icon = document.getElementById('audioIcon');
+      if (AppState.audioMuted) {
+        icon.setAttribute('data-lucide', 'volume-x');
+        showToast('צלילי התראות הושתקו', 'info');
+      } else {
+        icon.setAttribute('data-lucide', 'volume-2');
+        showToast('צלילי התראות פעילים', 'success');
+        playSeverityAlertSound('minor');
+      }
+      lucide.createIcons();
+    }
+
+    /* NAVIGATION LOGIC */
+    function navigateTo(viewId) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+      const target = document.getElementById(viewId);
+      if (target) {
+        target.classList.remove('hidden');
+      }
+      AppState.activeTab = viewId;
+
+      document.querySelectorAll('.nav-tab').forEach(el => {
+        el.classList.remove('bg-cyan-500/20', 'text-cyan-300', 'border', 'border-cyan-500/40');
+      });
+
+      const tabBtn = document.getElementById(viewId.replace('view-', 'tab-'));
+      if (tabBtn) {
+        tabBtn.classList.add('bg-cyan-500/20', 'text-cyan-300', 'border', 'border-cyan-500/40');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      lucide.createIcons();
+    }
+
+    /* BROWSER NATIVE NOTIFICATIONS */
+    function requestBrowserNotificationPermission() {
+      if ('Notification' in window) {
+        Notification.requestPermission().then(perm => {
+          if (perm === 'granted') {
+            showToast('התראות דפדפן חוצות-אתרים אושרו בהצלחה!', 'success');
+            new Notification('IncidentBridge Pro', {
+              body: 'הסוכן מחובר כעת. קריסות יקפצו על המסך גם כשהדפדפן ממוזער.',
+              icon: 'https://placehold.co/128x128/080c14/00f0ff?text=IB'
+            });
+          } else {
+            showToast('ההרשאה להתראות נדחתה ע"י המשתמש', 'warning');
+          }
+        });
+      }
+    }
+
+    function triggerNativeBrowserNotification(incident) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(`קריסה [${incident.severity.toUpperCase()}]: ${incident.title}`, {
+            body: incident.description,
+            icon: 'https://placehold.co/128x128/080c14/ff0055?text=CRASH'
+          });
+        } catch (e) {
+          console.debug('Notification error:', e);
+        }
+      }
+    }
+
+    /* GLOBAL CRASH BANNER (HUD) */
+    function showGlobalAlert(incident) {
+      AppState.activeIncident = incident;
+      const banner = document.getElementById('globalCrashBanner');
+      const box = document.getElementById('bannerBorderBox');
+      const title = document.getElementById('bannerTitle');
+      const desc = document.getElementById('bannerDesc');
+      const badge = document.getElementById('bannerSeverityBadge');
+      const time = document.getElementById('bannerTimestamp');
+      const target = document.getElementById('bannerSiteTarget');
+      const icon = document.getElementById('bannerIcon');
+
+      title.textContent = incident.title;
+      desc.textContent = incident.description;
+      time.textContent = incident.timestamp;
+      target.textContent = incident.sourceUrl || 'Monitored Target';
+
+      // Severity Color Styling
+      if (incident.severity === 'fatal') {
+        badge.textContent = 'חמור ביותר (P0)';
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-rose-500 text-black';
+        box.className = 'max-w-4xl mx-auto rounded-2xl p-4 shadow-2xl backdrop-blur-xl border border-rose-500 bg-rose-950/95 text-white flex flex-col sm:flex-row items-center justify-between gap-4 pointer-events-auto';
+        icon.setAttribute('data-lucide', 'skull');
+      } else if (incident.severity === 'critical') {
+        badge.textContent = 'קריטי (P1)';
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-orange-500 text-black';
+        box.className = 'max-w-4xl mx-auto rounded-2xl p-4 shadow-2xl backdrop-blur-xl border border-orange-500 bg-orange-950/95 text-white flex flex-col sm:flex-row items-center justify-between gap-4 pointer-events-auto';
+        icon.setAttribute('data-lucide', 'alert-triangle');
+      } else if (incident.severity === 'server') {
+        badge.textContent = 'בעיית שרת (5xx)';
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-pink-500 text-black';
+        box.className = 'max-w-4xl mx-auto rounded-2xl p-4 shadow-2xl backdrop-blur-xl border border-pink-500 bg-pink-950/95 text-white flex flex-col sm:flex-row items-center justify-between gap-4 pointer-events-auto';
+        icon.setAttribute('data-lucide', 'server');
+      } else if (incident.severity === 'data_corruption') {
+        badge.textContent = 'מידע פגום (Data Corruption)';
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-purple-500 text-white';
+        box.className = 'max-w-4xl mx-auto rounded-2xl p-4 shadow-2xl backdrop-blur-xl border border-purple-500 bg-purple-950/95 text-white flex flex-col sm:flex-row items-center justify-between gap-4 pointer-events-auto';
+        icon.setAttribute('data-lucide', 'binary');
+      } else {
+        badge.textContent = 'אזהרה (בינוני/קל)';
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500 text-black';
+        box.className = 'max-w-4xl mx-auto rounded-2xl p-4 shadow-2xl backdrop-blur-xl border border-amber-500 bg-amber-950/95 text-white flex flex-col sm:flex-row items-center justify-between gap-4 pointer-events-auto';
+        icon.setAttribute('data-lucide', 'alert-circle');
+      }
+
+      banner.classList.remove('-translate-y-32', 'opacity-0');
+      banner.classList.add('translate-y-0', 'opacity-100');
+
+      lucide.createIcons();
+    }
+
+    function dismissGlobalBanner() {
+      const banner = document.getElementById('globalCrashBanner');
+      banner.classList.add('-translate-y-32', 'opacity-0');
+      banner.classList.remove('translate-y-0', 'opacity-100');
+    }
+
+    function acknowledgeActiveIncident() {
+      if (AppState.activeIncident) {
+        AppState.activeIncident.acknowledged = true;
+        showToast(`אישור קבלה (ACK) נרשם לאירוע ${AppState.activeIncident.id}`, 'info');
+        updateIncidentStats();
+        dismissGlobalBanner();
+      }
+    }
+
+    function openActiveIncidentBridge() {
+      dismissGlobalBanner();
+      if (AppState.activeIncident) {
+        loadWarRoomIncident(AppState.activeIncident);
+      }
+      navigateTo('view-warroom');
+    }
+
+    /* INCIDENT TRIGGER ENGINE (סוגי תקלות מתוייגות) */
+    function triggerFault(severityKey) {
+      const timestamp = new Date().toLocaleTimeString('he-IL');
+      const targetUrl = document.getElementById('realTargetSiteUrl')?.value || 'https://example.com';
+      let title = '';
+      let desc = '';
+      let stack = '';
+      let score = 50;
+
+      if (severityKey === 'fatal') {
+        title = 'קריסה טוטאלית באתר (Out of Memory / Segmentation Fault)';
+        desc = 'סוכן הניטור תפס שגיאת קוד קריטית לא מטופלת שהשביתה את כל ה-DOM והאינטראקציה.';
+        stack = `Uncaught Error: Fatal crash at main.bundle.js:8912\n  at Engine.renderLoop (vendor.js:42:19)\n  at HTMLDocument.onCrash (/app/core.js:10:4)`;
+        score = 98;
+      } else if (severityKey === 'critical') {
+        title = 'נפילת שירותי סליקה ותשלומים (Checkout Blocked)';
+        desc = 'שרת התשלומים אינו מגיב לבקשות לקוח, מעל 15 עסקאות נכשלו בדקה האחרונה.';
+        stack = `PaymentGatewayError: HTTP 504 Timeout from gateway endpoint\n  at PaymentHandler.charge (/services/pay.js:201)`;
+        score = 89;
+      } else if (severityKey === 'server') {
+        title = 'שגיאת שרת פנימית (HTTP 500 / 502 Bad Gateway)';
+        desc = 'השרת מחזיר שגיאת 500, תהליכי ה-Backend עמוסים במאה אחוז צריכת מעבד.';
+        stack = `InternalServerError: 500 Database Connection Pool Exhausted\n  at ConnectionManager.getConnection (/db/pool.js:84)`;
+        score = 82;
+      } else if (severityKey === 'medium') {
+        title = 'שיהוי חריג ואיטיות בשאילתות שרת (High Latency)';
+        desc = 'זמני תגובה ממוצעים חצו את רף ה-2,500ms עבור שאילתות חיפוש מוצרים.';
+        stack = `PerformanceWarning: SlowQueryException (Duration: 3,420ms)\n  at QueryLogger.warn (/db/logger.js:33)`;
+        score = 56;
+      } else if (severityKey === 'minor') {
+        title = 'שגיאת UI בלתי חוסמת (Stylesheet / Font Missing)';
+        desc = 'התגלה רכיב ויזואלי שלא נטען כראוי, המערכת ממשיכה לתפקד ללא השבתה.';
+        stack = `DOMException: Failed to load resource: net::ERR_FILE_NOT_FOUND (icon.svg)`;
+        score = 24;
+      }
+
+      const newIncident = {
+        id: 'INC-' + Math.floor(1000 + Math.random() * 9000),
+        title: title,
+        severity: severityKey,
+        severityScore: score,
+        sourceUrl: targetUrl,
+        description: desc,
+        stackTrace: stack,
+        recommendations: [
+          'בדיקת תקינות השרת וה-Logs המיידיים',
+          'אתחול שירותי Worker או קונטיינרים תקועים',
+          'סריקת רשת ואבטחת חיבור'
+        ],
+        timestamp: timestamp,
+        resolved: false,
+        acknowledged: false,
+        commander: AppState.currentUser.name,
+        timeline: [
+          { time: timestamp, text: `התקלה זוהתה ע"י סוכן הניטור ב-${targetUrl}` },
+          { time: timestamp, text: `הוקפצה התראת מסך רוחבית למשתמש` }
+        ],
+        comments: [
+          {
+            author: AppState.currentUser.name,
+            role: AppState.currentUser.role,
+            time: timestamp,
+            text: `פתחתי טיפול באירוע ${severityKey}. החלתי בבדיקת RCA.`
+          }
+        ]
+      };
+
+      AppState.incidents.unshift(newIncident);
+      AppState.activeIncident = newIncident;
+      showGlobalAlert(newIncident);
+      triggerNativeBrowserNotification(newIncident);
+      playSeverityAlertSound(severityKey);
+      updateIncidentStats();
+      logToTelemetryConsole(`[CRASH CAPTURED] ${newIncident.id}: ${newIncident.title}`);
+    }
+
     /* DATA CORRUPTION SERVER LOGIC & MODAL HANDLING */
     let selectedCorruptionFileName = 'payload.json';
 
     function openDataCorruptionModal() {
-<!-- ... existing code ... -->
+      document.getElementById('dataCorruptionModal').classList.remove('hidden');
+      loadSampleCorruptJson();
+      lucide.createIcons();
+    }
+
+    function closeDataCorruptionModal() {
+      document.getElementById('dataCorruptionModal').classList.add('hidden');
+    }
+
+    function loadSampleCorruptJson() {
+      selectedCorruptionFileName = 'corrupted_orders_dump.json';
+      const sample = {
+        "batchId": "BATCH-9021",
+        "timestamp": 1720000000,
+        "records": [
+          { "orderId": 101, "customer": "John Doe", "amount": 150.00, "status": "COMPLETED" },
+          { "orderId": null, "customer": "CORRUPTED_HEX_BYTE_\x00\xFF", "amount": -99999, "status": null },
+          { "orderId": 103, "customer": "Alice", "amount": 80.50, "status": "PENDING" }
+        ],
+        "checksum": "0xINVALID_CRC32_MISMATCH"
+      };
+      document.getElementById('jsonPayloadArea').value = JSON.stringify(sample, null, 2);
+      document.getElementById('serverAnalysisResultBox').innerHTML = `
+        <span class="text-purple-400 font-bold">[קובץ נטען]: corrupted_orders_dump.json</span>
+        <div class="text-slate-400">מוכן לניתוח צד שרת. לחצו על 'שגר לבדיקת שרת ופתח תקרית'.</div>
+      `;
+    }
+
+    function loadSampleValidJson() {
+      selectedCorruptionFileName = 'clean_orders_valid.json';
+      const clean = {
+        "batchId": "BATCH-1004",
+        "timestamp": 1720004500,
+        "records": [
+          { "orderId": 101, "customer": "David Cohen", "amount": 120.00, "status": "COMPLETED" },
+          { "orderId": 102, "customer": "Sarah Levi", "amount": 450.50, "status": "COMPLETED" }
+        ],
+        "checksum": "0x9F41BA01"
+      };
+      document.getElementById('jsonPayloadArea').value = JSON.stringify(clean, null, 2);
+      document.getElementById('serverAnalysisResultBox').innerHTML = `
+        <span class="text-emerald-400 font-bold">[קובץ נטען]: clean_orders_valid.json</span>
+        <div class="text-slate-400">קובץ תקין ללא פגמים ידועים.</div>
+      `;
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        selectedCorruptionFileName = file.name;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('jsonPayloadArea').value = e.target.result;
+          document.getElementById('serverAnalysisResultBox').innerHTML = `
+            <span class="text-cyan-400 font-bold">[קובץ מקומי נטען]: ${file.name}</span>
+            <div class="text-slate-400">גודל: ${(file.size / 1024).toFixed(1)} KB. מוכן לבדיקה.</div>
+          `;
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    function submitDataCorruptionInvestigation() {
+      const rawJson = document.getElementById('jsonPayloadArea').value;
+      const resultBox = document.getElementById('serverAnalysisResultBox');
+      let parsed = null;
+      let isCorrupt = false;
+      let corruptionReason = '';
+
+      try {
+        parsed = JSON.parse(rawJson);
+        
+        // Deep Semantic Corruption Check
+        if (parsed.records && Array.isArray(parsed.records)) {
+          for (let i = 0; i < parsed.records.length; i++) {
+            const item = parsed.records[i];
+            if (item.orderId === null || item.amount < 0 || item.customer.includes('CORRUPTED')) {
+              isCorrupt = true;
+              corruptionReason = `רשומה #${i + 1} מכילה ערכי Null אסורים, סכום שלילי (${item.amount}) או בייטים פגומים.`;
+              break;
+            }
+          }
+        }
+        if (parsed.checksum && parsed.checksum.includes('INVALID')) {
+          isCorrupt = true;
+          corruptionReason = 'Checksum mismatch: סיכום ביקורת הנתונים לא תואם למקור.';
+        }
+      } catch (jsonErr) {
+        isCorrupt = true;
+        corruptionReason = `SyntaxError: קובץ ה-JSON שבור מבנית (Malformed JSON): ${jsonErr.message}`;
+      }
+
+      if (isCorrupt) {
+        resultBox.innerHTML = `
+          <div class="text-rose-400 font-bold">[פסיקת שרת: זוהה מידע פגום!]</div>
+          <div class="text-slate-300">סיבה: ${corruptionReason}</div>
+          <div class="text-xs text-purple-300 mt-1">נפתחה פניית חירום מסוג 'מידע פגום'. הפנייה הועברה לתור הטיפול.</div>
+        `;
+
+        const newIncident = {
+          id: 'INC-' + Math.floor(1000 + Math.random() * 9000),
+          title: `מידע פגום (Data Corruption) זוהה בקובץ ${selectedCorruptionFileName}`,
+          severity: 'data_corruption',
+          severityScore: 91,
+          sourceUrl: document.getElementById('realTargetSiteUrl')?.value || 'https://example.com/data/ingest',
+          description: `השרת דחה את הקובץ ${selectedCorruptionFileName} עקב זיהוי קורופציה: ${corruptionReason}`,
+          stackTrace: `DataCorruptionException: Validation failed for payload ${selectedCorruptionFileName}\n  at JSONValidator.verifyIntegrity (/server/validation.js:52)\n  Reason: ${corruptionReason}`,
+          recommendations: [
+            'בדיקת מקור יצירת ה-JSON ושחזור מגיבוי',
+            'תיקון שדות ה-Null והסרת רשומות שליליות',
+            'עדכון הלקוח וסגירת הפנייה לאחר אימות מחדש'
+          ],
+          timestamp: new Date().toLocaleTimeString('he-IL'),
+          resolved: false,
+          acknowledged: false,
+          commander: AppState.currentUser.name,
+          timeline: [
+            { time: new Date().toLocaleTimeString('he-IL'), text: `הקובץ ${selectedCorruptionFileName} הועלה לשרת` },
+            { time: new Date().toLocaleTimeString('he-IL'), text: `שרת האימות הכריז על קורופציה: ${corruptionReason}` }
+          ],
+          comments: [
+            {
+              author: 'Server Ingestion Engine',
+              role: 'System Daemon',
+              time: new Date().toLocaleTimeString('he-IL'),
+              text: `דחיית קובץ ${selectedCorruptionFileName}. המידע סווג כפגום.`
+            }
+          ]
+        };
+
+        AppState.incidents.unshift(newIncident);
+        AppState.activeIncident = newIncident;
+        showGlobalAlert(newIncident);
+        triggerNativeBrowserNotification(newIncident);
+        playSeverityAlertSound('fatal');
+        updateIncidentStats();
+        setTimeout(() => closeDataCorruptionModal(), 1800);
+      } else {
+        resultBox.innerHTML = `
+          <div class="text-emerald-400 font-bold">[פסיקת שרת: המידע תקין לחלוטין!]</div>
+          <div class="text-slate-300">הקובץ נבדק ועבר את כל מבחני ה-Schema וה-Checksum.</div>
+          <div class="text-xs text-slate-400 mt-1">אין צורך בפתיחת פנייה.</div>
+        `;
+        showToast('הקובץ תקין לחלוטין ולא מכיל מידע פגום!', 'success');
+      }
     }
 
     /* REAL TARGET SITE COMPREHENSIVE DIAGNOSTICS SUITE */
@@ -339,17 +1648,13 @@
         return;
       }
 
-      // Prepend https if protocol is missing
       if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
         targetUrl = 'https://' + targetUrl;
         if (input) input.value = targetUrl;
       }
 
-      // Update UI Header
       const displayUrl = document.getElementById('activeAppUrlDisplay');
       if (displayUrl) displayUrl.textContent = targetUrl;
-      const inputAppUrl = document.getElementById('activeAppUrl');
-      if (inputAppUrl) inputAppUrl.value = targetUrl;
 
       const subline = document.getElementById('monitoredSiteSubline');
       if (subline) subline.textContent = `URL: ${targetUrl} • בדיקה רציפה מתבצעת כעת...`;
@@ -360,7 +1665,7 @@
         scannerText.className = 'text-cyan-400 font-bold font-mono animate-pulse';
       }
 
-      logToTelemetryConsole(`[AUDIT START] Initiating multi-layer diagnostics on target: ${targetUrl}`);
+      logToTelemetryConsole(`[AUDIT START] Initiating diagnostics on target: ${targetUrl}`);
 
       // 1. Audit Protocol & Security
       let isHttps = targetUrl.startsWith('https://');
@@ -386,7 +1691,6 @@
           chkValSsl.textContent = 'Non-TLS / Insecure';
           chkValSsl.className = 'font-mono text-rose-400 font-bold';
         }
-        logToTelemetryConsole('[SECURITY AUDIT] Warning: Target uses plain unencrypted HTTP.');
       } else {
         if (metricSecurity) {
           metricSecurity.textContent = 'HTTPS (TLS)';
@@ -410,18 +1714,14 @@
       const startTime = performance.now();
       let latency = 0;
       let reachabilitySuccess = false;
-      let fetchStatusCode = null;
       let errorReason = null;
 
       try {
-        // We ping the target URL with a cache-busting timestamp
         const cacheBusterUrl = targetUrl + (targetUrl.includes('?') ? '&' : '?') + '_ib_ping=' + Date.now();
-        
-        // Use mode: 'no-cors' so that even sites without open CORS headers can be verified for network connectivity
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-        const response = await fetch(cacheBusterUrl, {
+        await fetch(cacheBusterUrl, {
           method: 'GET',
           mode: 'no-cors',
           signal: controller.signal
@@ -430,7 +1730,6 @@
 
         latency = Math.round(performance.now() - startTime);
         reachabilitySuccess = true;
-        fetchStatusCode = 200; // Received response packet
 
       } catch (networkError) {
         latency = Math.round(performance.now() - startTime);
@@ -456,7 +1755,6 @@
 
       // 4. Handle Fault Detection and Classification
       if (!reachabilitySuccess) {
-        // Severe Network or Server Failure detected on the real website!
         if (metricReachability) {
           metricReachability.textContent = 'FAILED (0%)';
           metricReachability.className = 'text-lg font-bold text-rose-500 mt-1 font-mono';
@@ -493,11 +1791,10 @@
           `;
         }
 
-        // Automatically trigger an incident with proper categorization!
         const incidentSeverity = errorReason.includes('Timeout') ? 'server' : 'fatal';
         const newIncident = {
           id: 'INC-' + Math.floor(1000 + Math.random() * 9000),
-          title: `כשל זמינות שרת באתר האמיתי (${new URL(targetUrl).hostname || targetUrl})`,
+          title: `כשל זמינות שרת באתר (${new URL(targetUrl).hostname || targetUrl})`,
           severity: incidentSeverity,
           severityScore: incidentSeverity === 'fatal' ? 97 : 88,
           sourceUrl: targetUrl,
@@ -511,9 +1808,9 @@
           timestamp: new Date().toLocaleTimeString('he-IL'),
           resolved: false,
           acknowledged: false,
-          commander: AppState.currentUser ? AppState.currentUser.name : 'מהנדס תורן SRE',
+          commander: AppState.currentUser.name,
           timeline: [
-            { time: new Date().toLocaleTimeString('he-IL'), text: `סורק האתרים האמיתי זיהה כשל ב-${targetUrl}` },
+            { time: new Date().toLocaleTimeString('he-IL'), text: `סורק האתרים זיהה כשל ב-${targetUrl}` },
             { time: new Date().toLocaleTimeString('he-IL'), text: `התראה רוחבית הוקפצה למסך המהנדס` }
           ],
           comments: [
@@ -532,10 +1829,7 @@
         triggerNativeBrowserNotification(newIncident);
         playSeverityAlertSound(incidentSeverity);
         updateIncidentStats();
-        logToTelemetryConsole(`[ALERT TRIGGERED] Real site down: ${targetUrl}`);
-
       } else {
-        // Site responded!
         if (metricReachability) {
           metricReachability.textContent = '100% OK';
           metricReachability.className = 'text-lg font-bold text-emerald-400 mt-1 font-mono';
@@ -557,7 +1851,6 @@
         }
 
         if (latency > 2000) {
-          // Trigger High Latency (Medium Severity)
           if (appStatus) {
             appStatus.textContent = 'HIGH LATENCY (SLOW)';
             appStatus.className = 'px-2.5 py-1 rounded text-xs font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40';
@@ -566,19 +1859,9 @@
             scannerText.textContent = 'זוהתה האטה חריגה!';
             scannerText.className = 'text-amber-400 font-bold font-mono';
           }
-          if (logBox) {
-            logBox.innerHTML = `
-              <div class="text-amber-400 font-bold">[LATENCY WARNING]: שיהוי חריג באתר ${targetUrl}</div>
-              <div class="text-slate-300">זמן תגובה: ${latency}ms (סף מותר: 800ms)</div>
-              <div class="text-xs text-amber-200 mt-1">נפתחה קריאת תקלה ברמת חומרה 'בינוני' עקב איטיות קיצונית.</div>
-            `;
-          }
-
           triggerFault('medium');
           showToast(`האתר פעיל אך סובל מאיטיות חריגה (${latency}ms)!`, 'warning');
-
         } else {
-          // Healthy!
           if (appStatus) {
             appStatus.textContent = `HEALTHY (200 OK - ${latency}ms)`;
             appStatus.className = 'px-2.5 py-1 rounded text-xs font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
@@ -591,13 +1874,10 @@
             logBox.innerHTML = `
               <div class="text-emerald-400 font-bold">[AUDIT PASSED] האתר ${targetUrl} זמין ותקין!</div>
               <div class="text-slate-300">זמן תגובה: ${latency}ms &bull; פרוטוקול: ${isHttps ? 'HTTPS/TLS' : 'HTTP'} &bull; סטטוס: Active</div>
-              <div class="text-xs text-emerald-300 mt-1">סוכן הניטור מחובר ומאזין לתקלות עתידיות בזמן אמת.</div>
             `;
           }
           showToast(`האתר ${targetUrl} נבדק ונמצא תקין וזמין (${latency}ms)!`, 'success');
         }
-
-        logToTelemetryConsole(`[AUDIT SUCCESS] Target responded in ${latency}ms.`);
       }
 
       lucide.createIcons();
@@ -610,15 +1890,17 @@
     }
 
     function simulateTargetCrash500() {
-      const url = document.getElementById('realTargetSiteUrl')?.value || 'https://example.com';
-      logToTelemetryConsole(`[INJECTION] Simulating HTTP 500 server crash on ${url}`);
       triggerFault('server');
     }
 
     function simulateTargetHighLatency() {
-      const url = document.getElementById('realTargetSiteUrl')?.value || 'https://example.com';
-      logToTelemetryConsole(`[INJECTION] Simulating high query latency on ${url}`);
       triggerFault('medium');
+    }
+
+    function saveCloudflareWorkerEndpoint() {
+      const val = document.getElementById('customCloudflareWorkerEndpoint').value.trim();
+      AppState.cloudflareWorkerEndpoint = val;
+      showToast('כתובת ה-Worker של Cloudflare נשמרה בהצלחה!', 'success');
     }
 
     function testRealSiteBroadcastChannel() {
@@ -652,13 +1934,13 @@
                 severity: crash.severity || 'fatal',
                 severityScore: crash.severity === 'fatal' ? 96 : 84,
                 sourceUrl: crash.sourceUrl || 'External Monitored Site',
-                description: 'התקבלה הודעת שגיאה חיה דרך סוכן הניטור המוטמע באתר האמיתי של המשתמש.',
+                description: 'התקבלה הודעת שגיאה חיה דרך סוכן הניטור המוטמע באתר האמיתי.',
                 stackTrace: crash.stackTrace || 'No stack trace provided by client agent',
                 recommendations: ['בדיקת ה-Console וה-Network בטאב של האתר המדווח', 'תיקון השגיאה בקוד המקור'],
                 timestamp: new Date().toLocaleTimeString('he-IL'),
                 resolved: false,
                 acknowledged: false,
-                commander: AppState.currentUser ? AppState.currentUser.name : 'מהנדס תורן SRE',
+                commander: AppState.currentUser.name,
                 timeline: [{ time: new Date().toLocaleTimeString('he-IL'), text: `הודעה נקלטה מסוכן האתר: ${crash.sourceUrl}` }],
                 comments: [{ author: 'BroadcastChannel Agent', role: 'Real-time Hook', time: new Date().toLocaleTimeString('he-IL'), text: 'קריסה נקלטה מהאתר החי.' }]
               };
@@ -668,7 +1950,6 @@
               triggerNativeBrowserNotification(newIncident);
               playSeverityAlertSound(newIncident.severity);
               updateIncidentStats();
-              logToTelemetryConsole(`[SDK HOOK TRIGGERED]: ${newIncident.title} from ${newIncident.sourceUrl}`);
             }
           };
         } catch (e) {
@@ -677,13 +1958,440 @@
       }
     }
 
-    function calculateSeverityScore(severityKey) {
-<!-- ... existing code ... -->
+    /* QUEUE FILTERING AND RESOLUTION SYSTEM */
+    function setStatusFilter(status) {
+      AppState.statusFilter = status;
+      ['all', 'open', 'ack', 'resolved'].forEach(s => {
+        const btn = document.getElementById('filterBtn' + s.charAt(0).toUpperCase() + s.slice(1));
+        if (btn) {
+          if (s === status) {
+            btn.className = 'px-3 py-1.5 rounded-lg bg-cyan-600 text-white font-bold transition';
+          } else {
+            btn.className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition';
+          }
+        }
+      });
+      renderIncidentsList();
+    }
+
+    function setSeverityFilter(sev) {
+      AppState.severityFilter = sev;
+      const ids = ['All', 'Fatal', 'Critical', 'Server', 'DataCorruption', 'Medium', 'Minor'];
+      ids.forEach(id => {
+        const btn = document.getElementById('sevFilter' + id);
+        if (btn) {
+          if (id.toLowerCase() === sev.toLowerCase() || (id === 'DataCorruption' && sev === 'data_corruption')) {
+            btn.className = 'px-2.5 py-1 rounded-lg bg-cyan-950 text-cyan-400 border border-cyan-800 font-bold shrink-0';
+          } else {
+            btn.className = 'px-2.5 py-1 rounded-lg bg-cyber-darker text-slate-400 border border-slate-800 shrink-0';
+          }
+        }
+      });
+      renderIncidentsList();
+    }
+
+    function clearResolvedIncidentsOnly() {
+      const resolvedCount = AppState.incidents.filter(i => i.resolved).length;
+      if (resolvedCount === 0) {
+        showToast('אין תקלות פתורות לניקוי. כל התקלות בתור עדיין פתוחות ודורשות טיפול!', 'info');
+        return;
+      }
+      AppState.incidents = AppState.incidents.filter(i => !i.resolved);
+      showToast(`נוקו ${resolvedCount} תקלות שנפתרו. התקלות הפתוחות נשמרו!`, 'success');
+      updateIncidentStats();
+    }
+
+    function restoreDefaultIncidents() {
+      AppState.incidents = JSON.parse(JSON.stringify(DefaultIncidentsBackup));
+      showToast('תקלות ברירת המחדל שוחזרו בהצלחה לתור!', 'success');
+      updateIncidentStats();
+    }
+
+    function updateIncidentStats() {
+      const total = AppState.incidents.length;
+      const open = AppState.incidents.filter(i => !i.resolved && !i.acknowledged).length;
+      const ack = AppState.incidents.filter(i => !i.resolved && i.acknowledged).length;
+      const resolved = AppState.incidents.filter(i => i.resolved).length;
+
+      document.getElementById('countFilterAll').textContent = total;
+      document.getElementById('countFilterOpen').textContent = open;
+      document.getElementById('countFilterAck').textContent = ack;
+      document.getElementById('countFilterResolved').textContent = resolved;
+
+      const badge = document.getElementById('faultQueueCountBadge');
+      if (badge) badge.textContent = `${open + ack} אירועים פעילים`;
+
+      const navBadge = document.getElementById('queueNavBadge');
+      if (navBadge) {
+        if (open > 0) navBadge.classList.remove('hidden');
+        else navBadge.classList.add('hidden');
+      }
+
+      renderIncidentsList();
+    }
+
+    function renderIncidentsList() {
+      const container = document.getElementById('incidentsListContainer');
+      if (!container) return;
+
+      let filtered = AppState.incidents;
+
+      // Status filter
+      if (AppState.statusFilter === 'open') {
+        filtered = filtered.filter(i => !i.resolved && !i.acknowledged);
+      } else if (AppState.statusFilter === 'ack') {
+        filtered = filtered.filter(i => !i.resolved && i.acknowledged);
+      } else if (AppState.statusFilter === 'resolved') {
+        filtered = filtered.filter(i => i.resolved);
+      }
+
+      // Severity filter
+      if (AppState.severityFilter !== 'all') {
+        filtered = filtered.filter(i => i.severity === AppState.severityFilter);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="glass-panel p-8 rounded-2xl text-center border border-slate-800 text-slate-400">
+            <i data-lucide="shield-check" class="w-10 h-10 text-emerald-400 mx-auto mb-2 opacity-80"></i>
+            <div class="text-sm font-bold text-white">אין אירועים תואמים לסינון הנוכחי</div>
+            <div class="text-xs text-slate-500 mt-1">כל המערכות פועלות כסדרן או שתקלות סוננו בהצלחה.</div>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      let html = '';
+      filtered.forEach(inc => {
+        let borderClass = 'border-slate-800';
+        let badgeClass = 'bg-slate-800 text-slate-300';
+        let sevHeb = 'קל';
+
+        if (inc.severity === 'fatal') {
+          borderClass = 'border-rose-600/60 bg-rose-950/20';
+          badgeClass = 'bg-rose-500/20 text-rose-300 border border-rose-500/30';
+          sevHeb = 'חמור ביותר (P0)';
+        } else if (inc.severity === 'critical') {
+          borderClass = 'border-orange-600/60 bg-orange-950/20';
+          badgeClass = 'bg-orange-500/20 text-orange-300 border border-orange-500/30';
+          sevHeb = 'קריטי (P1)';
+        } else if (inc.severity === 'server') {
+          borderClass = 'border-pink-600/60 bg-pink-950/20';
+          badgeClass = 'bg-pink-500/20 text-pink-300 border border-pink-500/30';
+          sevHeb = 'בעיית שרת (500)';
+        } else if (inc.severity === 'data_corruption') {
+          borderClass = 'border-purple-600/60 bg-purple-950/20';
+          badgeClass = 'bg-purple-500/20 text-purple-300 border border-purple-500/30';
+          sevHeb = 'מידע פגום (Data Corruption)';
+        } else if (inc.severity === 'medium') {
+          borderClass = 'border-amber-600/60 bg-amber-950/20';
+          badgeClass = 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+          sevHeb = 'בינוני (P2)';
+        }
+
+        const isResolved = inc.resolved;
+        const isAck = inc.acknowledged;
+
+        html += `
+          <div class="glass-panel p-4 rounded-2xl border ${borderClass} transition hover:border-cyan-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold ${badgeClass}">
+                  ${sevHeb}
+                </span>
+                <span class="text-xs font-mono text-slate-400">${inc.id}</span>
+                <span class="text-xs font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.2 rounded border border-cyan-800">${inc.timestamp}</span>
+                ${isResolved ? '<span class="px-2 py-0.2 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800">נפתר (Closed)</span>' : (isAck ? '<span class="px-2 py-0.2 rounded text-[10px] font-mono bg-blue-950 text-blue-400 border border-blue-800">בטיפול (ACK)</span>' : '<span class="px-2 py-0.2 rounded text-[10px] font-mono bg-rose-950 text-rose-400 border border-rose-800 animate-pulse">פתוח</span>')}
+              </div>
+              <h4 class="font-bold text-white text-sm mt-0.5">${inc.title}</h4>
+              <p class="text-xs text-slate-400 line-clamp-1">${inc.description}</p>
+              <div class="text-[11px] font-mono text-slate-500 flex items-center gap-2">
+                <span>יעד: ${inc.sourceUrl}</span>
+                <span>&bull;</span>
+                <span>מפקד אירוע: ${inc.commander}</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <button onclick="openIncidentInWarRoom('${inc.id}')" class="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow transition flex items-center gap-1">
+                <i data-lucide="radio" class="w-3.5 h-3.5"></i> נהל אירוע
+              </button>
+              ${!isResolved ? `
+                <button onclick="quickResolveIncident('${inc.id}')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-700 text-slate-300 hover:text-white text-xs border border-slate-700 transition" title="סמן כנפתר">
+                  <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    function renderMaintenanceCards() {
+      const container = document.getElementById('maintenanceListContainer');
+      if (!container) return;
+      let html = '';
+      AppState.maintenanceTasks.forEach(task => {
+        html += `
+          <div class="p-3.5 rounded-xl bg-cyber-darker border border-slate-800 hover:border-slate-700 transition text-xs space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-slate-400 text-[10px]">${task.id}</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-400 border border-cyan-800">${task.status}</span>
+            </div>
+            <h5 class="font-bold text-white text-xs">${task.title}</h5>
+            <div class="text-slate-400 flex items-center justify-between text-[11px]">
+              <span>מערכת: ${task.system}</span>
+              <span class="text-slate-500">אחראי: ${task.owner}</span>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    function openNewMaintenanceModal() {
+      showToast('ממשק פתיחת משימת תחזוקה חדשה פעיל', 'info');
+    }
+
+    function quickResolveIncident(id) {
+      const inc = AppState.incidents.find(i => i.id === id);
+      if (inc) {
+        inc.resolved = true;
+        inc.timeline.push({ time: new Date().toLocaleTimeString('he-IL'), text: `התקלה סומנה כפתורה ע"י ${AppState.currentUser.name}` });
+        showToast(`אירוע ${id} סומן כנפתר בהצלחה!`, 'success');
+        updateIncidentStats();
+      }
+    }
+
+    /* WAR ROOM CONTROLLER */
+    function openIncidentInWarRoom(id) {
+      const inc = AppState.incidents.find(i => i.id === id);
+      if (inc) {
+        loadWarRoomIncident(inc);
+        navigateTo('view-warroom');
+      }
+    }
+
+    function loadWarRoomIncident(inc) {
+      AppState.activeIncident = inc;
+      document.getElementById('warroomIncidentTitle').textContent = `אירוע פעיל: ${inc.title}`;
+      document.getElementById('warroomIncidentMeta').textContent = `מזהה: ${inc.id} • יעד: ${inc.sourceUrl} • מפקד אירוע: ${inc.commander}`;
+      document.getElementById('warroomStackTraceBox').textContent = inc.stackTrace || 'אין נתוני Stack Trace נוספים.';
+
+      // Render recommendations
+      const recBox = document.getElementById('warroomRecommendationsBox');
+      recBox.innerHTML = (inc.recommendations || []).map(r => `
+        <div class="p-3 bg-cyber-darker rounded-xl border border-slate-800 flex items-start gap-2">
+          <i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+          <span>${r}</span>
+        </div>
+      `).join('');
+
+      // Render timeline
+      const timelineBox = document.getElementById('warroomTimelineContainer');
+      timelineBox.innerHTML = (inc.timeline || []).map(t => `
+        <div class="flex items-center gap-3 p-2 rounded-lg bg-cyber-darker/60 border border-slate-800/80">
+          <span class="font-mono text-cyan-400 text-xs shrink-0">${t.time}</span>
+          <span class="text-slate-300 text-xs">${t.text}</span>
+        </div>
+      `).join('');
+
+      // Render chat
+      renderWarRoomChat();
+      lucide.createIcons();
+    }
+
+    function renderWarRoomChat() {
+      const inc = AppState.activeIncident;
+      const chatBox = document.getElementById('warroomChatContainer');
+      if (!inc || !chatBox) return;
+
+      if (!inc.comments || inc.comments.length === 0) {
+        chatBox.innerHTML = `<div class="text-slate-500 text-center py-8">אין עדיין הודעות בערוץ זה. רשום עדכון ראשון!</div>`;
+        return;
+      }
+
+      chatBox.innerHTML = inc.comments.map(c => `
+        <div class="p-2.5 rounded-xl bg-cyber-darker border border-slate-800 space-y-1">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="font-bold text-cyan-300 font-mono">${c.author} <span class="text-slate-500 font-normal">(${c.role})</span></span>
+            <span class="text-slate-500 font-mono">${c.time}</span>
+          </div>
+          <p class="text-slate-200 text-xs">${c.text}</p>
+        </div>
+      `).join('');
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function sendWarroomMessage() {
+      const input = document.getElementById('warroomChatInput');
+      const text = input.value.trim();
+      if (!text || !AppState.activeIncident) return;
+
+      if (!AppState.activeIncident.comments) AppState.activeIncident.comments = [];
+      AppState.activeIncident.comments.push({
+        author: AppState.currentUser.name,
+        role: AppState.currentUser.role,
+        time: new Date().toLocaleTimeString('he-IL'),
+        text: text
+      });
+
+      input.value = '';
+      renderWarRoomChat();
+      showToast('הודעה נוספה לערוץ התקשורת', 'info');
+    }
+
+    function resolveCurrentActiveIncident() {
+      if (AppState.activeIncident) {
+        AppState.activeIncident.resolved = true;
+        AppState.activeIncident.timeline.push({
+          time: new Date().toLocaleTimeString('he-IL'),
+          text: `האירוע נסגר רשמית על ידי ${AppState.currentUser.name}`
+        });
+        showToast(`אירוע ${AppState.activeIncident.id} נסגר בהצלחה! השירות חזר לתקנו.`, 'success');
+        updateIncidentStats();
+        navigateTo('view-queues');
+      }
+    }
+
+    /* AUTHENTICATION & LOGIN */
+    function openAuthModal(tab = 'login') {
+      document.getElementById('authModal').classList.remove('hidden');
+      switchAuthTab(tab);
+      lucide.createIcons();
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+
+    function switchAuthTab(tab) {
+      const formLogin = document.getElementById('formLogin');
+      const formSignup = document.getElementById('formSignup');
+      const btnLogin = document.getElementById('btnAuthTabLogin');
+      const btnSignup = document.getElementById('btnAuthTabSignup');
+
+      if (tab === 'login') {
+        formLogin.classList.remove('hidden');
+        formSignup.classList.add('hidden');
+        btnLogin.className = 'px-5 py-2 rounded-xl text-xs font-bold transition bg-cyan-600 text-white';
+        btnSignup.className = 'px-5 py-2 rounded-xl text-xs font-bold transition text-slate-400 hover:text-white';
+      } else {
+        formLogin.classList.add('hidden');
+        formSignup.classList.remove('hidden');
+        btnLogin.className = 'px-5 py-2 rounded-xl text-xs font-bold transition text-slate-400 hover:text-white';
+        btnSignup.className = 'px-5 py-2 rounded-xl text-xs font-bold transition bg-cyan-600 text-white';
+      }
+    }
+
+    function handleLoginSubmit(event) {
+      event.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      AppState.currentUser = {
+        name: email.split('@')[0],
+        email: email,
+        role: 'SRE / Incident Responder'
+      };
+      updateNavUserUI();
+      closeAuthModal();
+      showToast(`ברוך הבא! התחברת בהצלחה כ-${AppState.currentUser.name}`, 'success');
+    }
+
+    function handleSignupSubmit(event) {
+      event.preventDefault();
+      const name = document.getElementById('signupName').value;
+      const email = document.getElementById('signupEmail').value;
+      const role = document.getElementById('signupRole').value;
+      AppState.currentUser = { name, email, role };
+
+      if (document.getElementById('signupPermNotify').checked) {
+        requestBrowserNotificationPermission();
+      }
+
+      updateNavUserUI();
+      closeAuthModal();
+      showToast(`הרשמתך כ-${role} הושלמה בהצלחה! סוכן הניטור חמוש.`, 'success');
+    }
+
+    function updateNavUserUI() {
+      const area = document.getElementById('navAuthArea');
+      if (area) {
+        area.innerHTML = `
+          <div class="flex items-center gap-2 bg-cyber-darker border border-cyber-border rounded-xl px-3 py-1 text-xs">
+            <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+            <div class="text-right">
+              <span class="text-white font-bold block leading-tight">${AppState.currentUser.name}</span>
+              <span class="text-[10px] text-slate-400 block">${AppState.currentUser.role}</span>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    /* TELEMETRY CONSOLE & TOASTS */
+    function logToTelemetryConsole(msg) {
+      const consoleBox = document.getElementById('consoleLiveLog');
+      if (consoleBox) {
+        const time = new Date().toLocaleTimeString('he-IL');
+        const div = document.createElement('div');
+        div.className = 'text-slate-300';
+        div.textContent = `[${time}] ${msg}`;
+        consoleBox.appendChild(div);
+        consoleBox.scrollTop = consoleBox.scrollHeight;
+      }
+    }
+
+    function clearConsoleLog() {
+      const consoleBox = document.getElementById('consoleLiveLog');
+      if (consoleBox) {
+        consoleBox.innerHTML = '<div class="text-slate-500">[Console cleared by operator]</div>';
+      }
+    }
+
+    function showToast(text, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      let border = 'border-cyan-500/80 bg-cyber-card';
+      let icon = 'info';
+
+      if (type === 'success') {
+        border = 'border-emerald-500/80 bg-emerald-950/90 text-emerald-200';
+        icon = 'check-circle';
+      } else if (type === 'warning') {
+        border = 'border-amber-500/80 bg-amber-950/90 text-amber-200';
+        icon = 'alert-triangle';
+      }
+
+      toast.className = `p-3 rounded-xl border ${border} text-xs font-semibold shadow-xl flex items-center gap-2 transition-all transform duration-300 translate-y-4 opacity-0 pointer-events-auto`;
+      toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 shrink-0"></i><span>${text}</span>`;
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-4', 'opacity-0');
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    /* INITIALIZATION ON LOAD */
+    window.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
       updateIncidentStats();
       renderMaintenanceCards();
       setupCrossTabAgentListener();
-      // Run initial diagnostic check
       runRealSiteComprehensiveDiagnostics();
     });
   </script>
